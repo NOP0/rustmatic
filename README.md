@@ -15,3 +15,5 @@ Rustmatic is an attempt at creating a PLC like environment programmable in Rust.
 * Graphical programming in LAD, SFC?
 * Single stepping, single cycle
 * Standardized interface to HMI
+
+![Overview](Overview.png)
