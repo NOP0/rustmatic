@@ -1,6 +1,9 @@
 # Rustmatic
 
-Rustmatic is an attempt at creating a PLC like environment programmable in Rust.
+Rustmatic is an attempt at creating a PLC like environment programmable in Rust. 
+
+It's currently in the brainstorming, proof-of-concept phase.
+All suggestions etc. are welcome.
 
 # Goals
 
@@ -16,4 +19,5 @@ Rustmatic is an attempt at creating a PLC like environment programmable in Rust.
 * Single stepping, single cycle
 * Standardized interface to HMI
 
+# Overview
 ![Overview](Overview.png)
