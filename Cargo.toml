@@ -1,8 +1,13 @@
 [package]
 name = "rustmatic"
 version = "0.1.0"
-authors = ["NOP0 <33583294+NOP0@users.noreply.github.com>"]
+authors = ["NOP0 <33583294+NOP0@users.noreply.github.com>", "Michael-F-Bryan <michaelfbryan@gmail.com>"]
 edition = "2018"
+description = "The entrypoint into the rustmatic runtime"
+publish = false
 
 [dependencies]
 slotmap = "0.4.0"
+
+[workspace]
+members = ["core"]
