@@ -8,6 +8,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "rustmatic-core"
+version = "0.1.0"
+dependencies = [
+ "slotmap 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "rustmatic-runtime"
+version = "0.1.0"
+dependencies = [
+ "rustmatic-core 0.1.0",
+ "slotmap 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
 name = "slotmap"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"

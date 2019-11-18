@@ -1,0 +1,12 @@
+[package]
+name = "rustmatic-runtime"
+version = "0.1.0"
+authors = ["Michael Bryan <michaelfbryan@gmail.com>"]
+edition = "2018"
+description = "The component in charge of running programs and interfacing with the outside world."
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+rustmatic-core = { path = "../core" }
+slotmap = "0.4.0"
