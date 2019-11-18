@@ -1,3 +1,5 @@
+//! Core abstractions and datatypes used by the rustmatic PLC environment.
+
 use std::time::Instant;
 
 /// The interface exposed to a [`Process`] so it can interact with the outside

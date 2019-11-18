@@ -1,3 +1,5 @@
+//! The system in charge of working with IO and executing processes.
+
 use rustmatic_core::{
     Device, InputNumber, OutputNumber, Process, System, Transition, Value, VariableIndex,
 };
@@ -52,9 +54,10 @@ impl Runtime {
 
     /// Poll all known [`Process`]es, removing any that have run to completion
     /// or faulted.
-    pub fn poll(&mut self) {
+    pub fn poll(&mut self) -> Vec<(ProcessIndex, Fault)> {
         // we'll need to remember which processes are finished
         let mut to_remove = Vec::new();
+        let mut faults = Vec::new();
 
         // poll all registered process
         for (pid, process) in &mut self.processes {
@@ -68,14 +71,16 @@ impl Runtime {
             match process.poll(&ctx) {
                 Transition::Completed => to_remove.push(pid),
                 Transition::StillRunning => {}
-                Transition::Fault(_) => unimplemented!(
-                    "TODO: Collect all faulted PIDs and their `Fault`s so we can notify the user"
-                ),
+                Transition::Fault(fault) => {
+                    faults.push((pid, fault));
+                }
             }
         }
 
         // remove all finished processes
         self.processes.retain(|pid, _| !to_remove.contains(&pid));
+
+        faults
     }
 }
 
