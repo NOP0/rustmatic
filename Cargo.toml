@@ -5,3 +5,4 @@ authors = ["NOP0 <33583294+NOP0@users.noreply.github.com>"]
 edition = "2018"
 
 [dependencies]
+slotmap = "0.4.0"

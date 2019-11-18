@@ -3,4 +3,14 @@
 [[package]]
 name = "rustmatic"
 version = "0.1.0"
+dependencies = [
+ "slotmap 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
+]
 
+[[package]]
+name = "slotmap"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[metadata]
+"checksum slotmap 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)" = "c46a3482db8f247956e464d783693ece164ca056e6e67563ee5505bdb86452cd"
