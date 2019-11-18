@@ -1,6 +1,8 @@
-use rustmatic_core::{Device, InputNumber, OutputNumber, Process, Transition};
+use rustmatic_core::{
+    Device, InputNumber, OutputNumber, Process, System, Transition, Value, VariableIndex,
+};
 use slotmap::DenseSlotMap;
-use std::time::Instant;
+use std::{cell::RefCell, time::Instant};
 
 slotmap::new_key_type! {
     pub struct DeviceIndex;
@@ -9,11 +11,13 @@ slotmap::new_key_type! {
 
 type Devices = DenseSlotMap<DeviceIndex, Box<dyn Device>>;
 type Processes = DenseSlotMap<ProcessIndex, Box<dyn Process<Fault = Fault>>>;
+type Variables = DenseSlotMap<VariableIndex, Variable>;
 
 /// The PLC runtime.
 pub struct Runtime {
     pub(crate) devices: Devices,
     pub(crate) processes: Processes,
+    pub(crate) variables: Variables,
 }
 
 impl Runtime {
@@ -22,6 +26,7 @@ impl Runtime {
         Runtime {
             devices: Devices::with_key(),
             processes: Processes::with_key(),
+            variables: Variables::with_key(),
         }
     }
 
@@ -48,15 +53,18 @@ impl Runtime {
     /// Poll all known [`Process`]es, removing any that have run to completion
     /// or faulted.
     pub fn poll(&mut self) {
-        // set up the device context
-        let ctx = Context {
-            _devices: &self.devices,
-        };
         // we'll need to remember which processes are finished
         let mut to_remove = Vec::new();
 
         // poll all registered process
         for (pid, process) in &mut self.processes {
+            // set up the device context
+            let ctx = Context {
+                _devices: &self.devices,
+                current_process: pid,
+                variables: RefCell::new(&mut self.variables),
+            };
+
             match process.poll(&ctx) {
                 Transition::Completed => to_remove.push(pid),
                 Transition::StillRunning => {}
@@ -79,9 +87,11 @@ pub enum Fault {}
 /// known by our [`Runtime`].
 struct Context<'a> {
     _devices: &'a Devices,
+    variables: RefCell<&'a mut Variables>,
+    current_process: ProcessIndex,
 }
 
-impl<'a> rustmatic_core::System for Context<'a> {
+impl<'a> System for Context<'a> {
     fn get_digital_input(&self, _number: InputNumber) -> Option<bool> {
         unimplemented!(
             "TODO: Figure out which device corresponds to the InputNumber and defer to that"
@@ -97,4 +107,45 @@ impl<'a> rustmatic_core::System for Context<'a> {
     fn now(&self) -> Instant {
         Instant::now()
     }
+
+    fn declare_variable(&self, name: &str, initial_value: Value) -> VariableIndex {
+        let variable = Variable {
+            name: String::from(name),
+            owner: self.current_process,
+            value: RefCell::new(initial_value),
+        };
+
+        self.variables.borrow_mut().insert(variable)
+    }
+
+    fn read_variable(&self, index: VariableIndex) -> Option<Value> {
+        self.variables
+            .borrow_mut()
+            .get(index)
+            .map(|var| var.value.borrow().clone())
+    }
+
+    fn set_variable(&self, index: VariableIndex, new_value: Value) {
+        if let Some(var) = self.variables.borrow_mut().get(index) {
+            let mut value = var.value.borrow_mut();
+            *value = new_value;
+        }
+    }
+}
+
+/// A [`Variable`] is some value that can be accessed by different parts of the
+/// runtime (e.g. another process or a debugger).
+#[derive(Debug, Clone, PartialEq)]
+pub struct Variable {
+    /// A human-friendly name for the variable.
+    pub name: String,
+    /// The [`Process`] this variable is associated with.
+    pub owner: ProcessIndex,
+    /// The variable's current value.
+    ///
+    /// # Note
+    ///
+    /// Interior mutability is used because many [`Process`]es may want to
+    /// access the [`Value`] or parent [`System`] concurrently.
+    pub value: RefCell<Value>,
 }
