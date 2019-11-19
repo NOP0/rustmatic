@@ -1,7 +1,8 @@
 //! The system in charge of working with IO and executing processes.
 
 use rustmatic_core::{
-    Device, InputNumber, OutputNumber, Process, System, Transition, Value, VariableIndex,
+    Device, InputNumber, OutputNumber, Process, System, Transition, Value,
+    VariableIndex,
 };
 use slotmap::DenseSlotMap;
 use std::{cell::RefCell, time::Instant};
@@ -33,7 +34,9 @@ impl Runtime {
     }
 
     /// Get an iterator over all known devices.
-    pub fn iter_devices<'this>(&'this self) -> impl Iterator<Item = &'this dyn Device> + 'this {
+    pub fn iter_devices<'this>(
+        &'this self,
+    ) -> impl Iterator<Item = &'this dyn Device> + 'this {
         self.devices.iter().map(|(_key, boxed)| &**boxed)
     }
 
@@ -70,10 +73,10 @@ impl Runtime {
 
             match process.poll(&ctx) {
                 Transition::Completed => to_remove.push(pid),
-                Transition::StillRunning => {}
+                Transition::StillRunning => {},
                 Transition::Fault(fault) => {
                     faults.push((pid, fault));
-                }
+                },
             }
         }
 
@@ -109,11 +112,13 @@ impl<'a> System for Context<'a> {
         )
     }
 
-    fn now(&self) -> Instant {
-        Instant::now()
-    }
+    fn now(&self) -> Instant { Instant::now() }
 
-    fn declare_variable(&self, name: &str, initial_value: Value) -> VariableIndex {
+    fn declare_variable(
+        &self,
+        name: &str,
+        initial_value: Value,
+    ) -> VariableIndex {
         let variable = Variable {
             name: String::from(name),
             owner: self.current_process,

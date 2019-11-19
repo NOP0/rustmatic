@@ -17,7 +17,11 @@ pub trait System {
     /// Get the current time.
     fn now(&self) -> Instant;
     /// Declare a variable which can be accessed by the outside world.
-    fn declare_variable(&self, name: &str, initial_value: Value) -> VariableIndex;
+    fn declare_variable(
+        &self,
+        name: &str,
+        initial_value: Value,
+    ) -> VariableIndex;
     /// Get a copy of a variable's current value.
     fn read_variable(&self, index: VariableIndex) -> Option<Value>;
     /// Give a variable a new value.
