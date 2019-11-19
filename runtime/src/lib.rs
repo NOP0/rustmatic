@@ -1,8 +1,8 @@
 //! The system in charge of working with IO and executing processes.
 
 use rustmatic_core::{
-    Device, InputNumber, OutputNumber, Process, System, Transition, Value,
-    VariableIndex,
+    Clock, InputNumber, InputOutput, InputOutputError, OutputNumber, Process,
+    System, Transition, Value, VariableError, VariableIndex,
 };
 use slotmap::DenseSlotMap;
 use std::{cell::RefCell, time::Instant};
@@ -12,7 +12,7 @@ slotmap::new_key_type! {
     pub struct ProcessIndex;
 }
 
-type Devices = DenseSlotMap<DeviceIndex, Box<dyn Device>>;
+type Devices = DenseSlotMap<DeviceIndex, Box<dyn InputOutput<bool>>>;
 type Processes = DenseSlotMap<ProcessIndex, Box<dyn Process<Fault = Fault>>>;
 type Variables = DenseSlotMap<VariableIndex, Variable>;
 
@@ -31,13 +31,6 @@ impl Runtime {
             processes: Processes::with_key(),
             variables: Variables::with_key(),
         }
-    }
-
-    /// Get an iterator over all known devices.
-    pub fn iter_devices<'this>(
-        &'this self,
-    ) -> impl Iterator<Item = &'this dyn Device> + 'this {
-        self.devices.iter().map(|(_key, boxed)| &**boxed)
     }
 
     /// Get an iterator over all known processes.
@@ -100,46 +93,72 @@ struct Context<'a> {
 }
 
 impl<'a> System for Context<'a> {
-    fn get_digital_input(&self, _number: InputNumber) -> Option<bool> {
-        unimplemented!(
-            "TODO: Figure out which device corresponds to the InputNumber and defer to that"
-        )
-    }
+    fn digital_io(&self) -> &dyn InputOutput<bool> { self }
 
-    fn set_digital_output(&self, _number: OutputNumber, _state: bool) {
-        unimplemented!(
-            "TODO: Figure out which device corresponds to the OutputNumber and defer to that"
-        )
-    }
+    fn variables(&self) -> &dyn rustmatic_core::Variables { self }
 
-    fn now(&self) -> Instant { Instant::now() }
+    fn clock(&self) -> &dyn Clock { self }
+}
 
-    fn declare_variable(
+impl<'a> rustmatic_core::Variables for Context<'a> {
+    fn declare(
         &self,
         name: &str,
         initial_value: Value,
-    ) -> VariableIndex {
+    ) -> Result<VariableIndex, VariableError> {
         let variable = Variable {
             name: String::from(name),
             owner: self.current_process,
             value: RefCell::new(initial_value),
         };
 
-        self.variables.borrow_mut().insert(variable)
+        let existing_declaration = self
+            .variables
+            .borrow()
+            .iter()
+            .find(|(_, var)| var.name == name)
+            .map(|(key, _var)| key);
+
+        match existing_declaration {
+            Some(previous_definition) => {
+                Err(VariableError::DuplicateVariable {
+                    previous_definition,
+                })
+            },
+            None => Ok(self.variables.borrow_mut().insert(variable)),
+        }
     }
 
-    fn read_variable(&self, index: VariableIndex) -> Option<Value> {
+    fn read(&self, index: VariableIndex) -> Option<Value> {
         self.variables
             .borrow_mut()
             .get(index)
             .map(|var| var.value.borrow().clone())
     }
 
-    fn set_variable(&self, index: VariableIndex, new_value: Value) {
+    fn set(&self, index: VariableIndex, new_value: Value) {
         if let Some(var) = self.variables.borrow_mut().get(index) {
             let mut value = var.value.borrow_mut();
             *value = new_value;
         }
+    }
+}
+
+impl<'a> Clock for Context<'a> {
+    fn now(&self) -> Instant { Instant::now() }
+}
+
+impl<'a> InputOutput<bool> for Context<'a> {
+    fn read(&self, _number: InputNumber) -> Result<bool, InputOutputError> {
+        unimplemented!()
+    }
+
+    fn write(
+        &self,
+        _number: OutputNumber,
+        _value: bool,
+    ) -> Result<(), InputOutputError> {
+        unimplemented!()
     }
 }
 
