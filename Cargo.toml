@@ -8,6 +8,8 @@ publish = false
 
 [dependencies]
 slotmap = "0.4.0"
+rustmatic-runtime = { path = "./runtime" }
+rustmatic-core = { path = "./core" }
 
 [workspace]
 members = ["core", "runtime"]

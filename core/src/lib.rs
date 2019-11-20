@@ -10,10 +10,11 @@ use std::time::Instant;
 /// A [`System`] may be used concurrently by multiple [`Process`]es, so it will
 /// need to use some form of interior mutability.
 pub trait System {
+
     /// Read the state of a single input pin.
-    fn get_digital_input(&self, number: InputNumber) -> Option<bool>;
+ //   fn get_channel(&self, number: InputNumber) -> Option<T>;
     /// Set the state of a single output pin.
-    fn set_digital_output(&self, number: OutputNumber, state: bool);
+ //   fn set_channel(&self, number: OutputNumber, state: T);
     /// Get the current time.
     fn now(&self) -> Instant;
     /// Declare a variable which can be accessed by the outside world.
@@ -61,9 +62,19 @@ pub enum Transition<F> {
 pub trait Device {
     /// A human-readable, one-line description of the device.
     fn description(&self) -> &str;
-    fn get_digital_input(&self, number: InputNumber) -> Option<bool>;
-    fn set_digital_output(&self, number: OutputNumber, state: bool);
+    fn update(&self);
 }
+pub trait InputChannel<T>{
+    fn update(&self) -> Option<T>;
+    fn register(&self, system: &dyn System);
+}
+
+pub trait OutputChannel<T>{
+    fn update(&self, state: T);
+    fn register(&self, system: &dyn System);
+}
+
+
 
 /// All value types known to the PLC runtime.
 #[derive(Debug, Clone, PartialEq)]

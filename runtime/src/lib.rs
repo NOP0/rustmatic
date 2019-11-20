@@ -2,23 +2,26 @@
 
 use rustmatic_core::{
     Device, InputNumber, OutputNumber, Process, System, Transition, Value,
-    VariableIndex,
+    VariableIndex, InputChannel
 };
 use slotmap::DenseSlotMap;
 use std::{cell::RefCell, time::Instant};
 
 slotmap::new_key_type! {
     pub struct DeviceIndex;
+    pub struct InputChannelsIndex;
     pub struct ProcessIndex;
 }
 
 type Devices = DenseSlotMap<DeviceIndex, Box<dyn Device>>;
+type InputChannels = DenseSlotMap<InputChannelsIndex, Box<dyn InputChannel<T>>>;
 type Processes = DenseSlotMap<ProcessIndex, Box<dyn Process<Fault = Fault>>>;
 type Variables = DenseSlotMap<VariableIndex, Variable>;
 
 /// The PLC runtime.
 pub struct Runtime {
     pub(crate) devices: Devices,
+    pub(crate) input_channels: InputChannels,
     pub(crate) processes: Processes,
     pub(crate) variables: Variables,
 }
@@ -28,6 +31,7 @@ impl Runtime {
     pub fn new() -> Self {
         Runtime {
             devices: Devices::with_key(),
+            input_channels: InputChannels::with_key(),
             processes: Processes::with_key(),
             variables: Variables::with_key(),
         }
@@ -54,6 +58,15 @@ impl Runtime {
     {
         self.processes.insert(Box::new(process))
     }
+
+    // TODO: Should link channel to parent device somehov
+    pub fn register_input<C>(&mut self, channel: C) -> InputNumber
+    where
+        C: InputChannel<T> +'static,
+    {
+        self.input_channels.insert(Box::new(channel));
+    }
+
 
     /// Poll all known [`Process`]es, removing any that have run to completion
     /// or faulted.
@@ -100,17 +113,17 @@ struct Context<'a> {
 }
 
 impl<'a> System for Context<'a> {
-    fn get_digital_input(&self, _number: InputNumber) -> Option<bool> {
-        unimplemented!(
-            "TODO: Figure out which device corresponds to the InputNumber and defer to that"
-        )
-    }
-
-    fn set_digital_output(&self, _number: OutputNumber, _state: bool) {
-        unimplemented!(
-            "TODO: Figure out which device corresponds to the OutputNumber and defer to that"
-        )
-    }
+//    fn get_digital_input(&self, _number: InputNumber) -> Option<bool> {
+//        unimplemented!(
+//            "TODO: Figure out which device corresponds to the InputNumber and defer to that"
+//        )
+//    }
+//
+//    fn set_digital_output(&self, _number: OutputNumber, _state: bool) {
+//        unimplemented!(
+//            "TODO: Figure out which device corresponds to the OutputNumber and defer to that"
+//        )
+//    }
 
     fn now(&self) -> Instant { Instant::now() }
 

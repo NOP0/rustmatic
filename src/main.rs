@@ -1,27 +1,38 @@
-pub mod plc;
+use rustmatic_runtime::Runtime;
+use rustmatic_core::{Device, InputChannel};
+
 
 fn main() {
-    // bool example
-    let mut pi_bool: plc::ProcessImageInputs<bool> =
-        plc::ProcessImageInputs::new(1000);
 
-    let my_bool = pi_bool.insert(true);
+    #[derive(Copy, Clone)]
+    struct StandardDigitalInput{
+        state: bool,
+    }
 
-    println!("{:?}", pi_bool.get(my_bool).unwrap());
+    impl StandardDigitalInput{
+        pub fn new() -> Self{
+            StandardDigitalInput{
+                state: false,
+            }
+        }
+    }
+    struct Mydevice{
+        channels: Vec<StandardDigitalInput>,
+    }
 
-    *(pi_bool.get_mut(my_bool).unwrap()) = false; // TODO: Poor ergonomics!
+    impl Mydevice{
+        pub fn new() -> Self{
+            Mydevice{
+            channels: vec![StandardDigitalInput::new();8]
+            }
+                    
+    }
 
-    println!("{:?}", pi_bool.get(my_bool).unwrap());
+  
+}
 
-    // float example
-    let mut pi_float: plc::ProcessImageInputs<f64> =
-        plc::ProcessImageInputs::new(1000);
+let my_device = Mydevice::new();
 
-    let my_float = pi_float.insert(10.0);
 
-    println!("{:?}", pi_float.get(my_float).unwrap());
 
-    *(pi_float.get_mut(my_float).unwrap()) = 13.0;
-
-    println!("{:?}", pi_float.get(my_float).unwrap());
 }
