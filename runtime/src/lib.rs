@@ -1,7 +1,11 @@
 //! The system in charge of working with IO and executing processes.
 
+mod device_manager;
+
+pub use device_manager::DeviceManager;
+
 use rustmatic_core::{
-    Device, InputNumber, OutputNumber, Process, System, Transition, Value,
+    InputNumber, OutputNumber, Process, System, Transition, Value,
     VariableIndex,
 };
 use slotmap::DenseSlotMap;
@@ -12,13 +16,12 @@ slotmap::new_key_type! {
     pub struct ProcessIndex;
 }
 
-type Devices = DenseSlotMap<DeviceIndex, Box<dyn Device>>;
 type Processes = DenseSlotMap<ProcessIndex, Box<dyn Process<Fault = Fault>>>;
 type Variables = DenseSlotMap<VariableIndex, Variable>;
 
 /// The PLC runtime.
 pub struct Runtime {
-    pub(crate) devices: Devices,
+    pub(crate) devices: DeviceManager,
     pub(crate) processes: Processes,
     pub(crate) variables: Variables,
 }
@@ -27,17 +30,10 @@ impl Runtime {
     /// Create an empty [`Runtime`].
     pub fn new() -> Self {
         Runtime {
-            devices: Devices::with_key(),
+            devices: DeviceManager::new(),
             processes: Processes::with_key(),
             variables: Variables::with_key(),
         }
-    }
-
-    /// Get an iterator over all known devices.
-    pub fn iter_devices<'this>(
-        &'this self,
-    ) -> impl Iterator<Item = &'this dyn Device> + 'this {
-        self.devices.iter().map(|(_key, boxed)| &**boxed)
     }
 
     /// Get an iterator over all known processes.
@@ -94,7 +90,7 @@ pub enum Fault {}
 /// The interface a [`Process`] can use to interact with the [`Device`]s
 /// known by our [`Runtime`].
 struct Context<'a> {
-    _devices: &'a Devices,
+    _devices: &'a DeviceManager,
     variables: RefCell<&'a mut Variables>,
     current_process: ProcessIndex,
 }

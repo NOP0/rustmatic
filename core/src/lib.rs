@@ -58,11 +58,27 @@ pub enum Transition<F> {
 }
 
 /// An individual IO device (e.g. Ethercat bus).
-pub trait Device {
+///
+/// # Note To Implementors
+///
+/// If the `index` is out of range, the `Device<T>` *must* fail early with
+/// [`DeviceError::UnknownNumber`]. This allows callers to test whether an
+/// input is supported by trying a `read()` or `write()` and checking for an
+/// error.
+pub trait Device<T> {
     /// A human-readable, one-line description of the device.
     fn description(&self) -> &str;
-    fn get_digital_input(&self, number: InputNumber) -> Option<bool>;
-    fn set_digital_output(&self, number: OutputNumber, state: bool);
+    fn read(&self, number: InputNumber) -> Result<T, DeviceError>;
+    fn write(
+        &self,
+        number: OutputNumber,
+        new_state: T,
+    ) -> Result<(), DeviceError>;
+}
+
+#[derive(Debug, Copy, Clone, PartialEq)]
+pub enum DeviceError {
+    UnknownNumber,
 }
 
 /// All value types known to the PLC runtime.
