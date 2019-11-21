@@ -4,21 +4,25 @@ use rustmatic_core::{
     Device, InputNumber, OutputNumber, Process, System, Transition, Value,
     VariableIndex,
 };
-use slotmap::DenseSlotMap;
+use slotmap::{DenseSlotMap, SecondaryMap};
 use std::{cell::RefCell, time::Instant};
 
 slotmap::new_key_type! {
+    pub struct ChannelIndex;
     pub struct DeviceIndex;
     pub struct ProcessIndex;
 }
 
 type Devices = DenseSlotMap<DeviceIndex, Box<dyn Device>>;
+type Channels = DenseSlotMap<ChannelIndex, Box<dyn Channel>>;
+type ChannelsToDevices = SecondaryMap<ChannelIndex, DeviceIndex>;
 type Processes = DenseSlotMap<ProcessIndex, Box<dyn Process<Fault = Fault>>>;
 type Variables = DenseSlotMap<VariableIndex, Variable>;
 
 /// The PLC runtime.
 pub struct Runtime {
     pub(crate) devices: Devices,
+    pub(crate) channels: Channels,
     pub(crate) processes: Processes,
     pub(crate) variables: Variables,
 }
@@ -28,6 +32,7 @@ impl Runtime {
     pub fn new() -> Self {
         Runtime {
             devices: Devices::with_key(),
+            channels: Channels::with_key(),
             processes: Processes::with_key(),
             variables: Variables::with_key(),
         }
