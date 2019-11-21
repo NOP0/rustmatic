@@ -1,5 +1,7 @@
 //! The high-level intermediate representation of an IEC 61131-3 application.
 
+use specs::Entity;
+
 /// the language element which corresponds to a *programmable controller system*
 /// as defined in IEC 61131-1.
 ///
@@ -49,3 +51,50 @@ pub struct FunctionBlock {}
 /// [`Configuration`].
 #[derive(Debug, Clone, PartialEq)]
 pub struct Variable {}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Type {
+    pub name: String,
+    /// The [`Type`] this [`Type`] inherits from.
+    pub parent: Option<Entity>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum TypeKind {
+    Builtin,
+    Array(Array),
+    Enum(Enumeration),
+    Composite(Struct),
+    BoundedInteger(BoundedInteger),
+}
+
+/// An array of homogeneous items.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Array {
+    pub length: usize,
+    /// The [`Type`] of the items in this array.
+    pub element_type: Entity,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Enumeration {
+    /// The [`EnumerationVariant`]s associated with this [`Enumeration`].
+    pub variants: Vec<Entity>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct EnumerationVariant {
+    pub name: String,
+    pub value: i64,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Struct {}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct BoundedInteger {
+    /// The underlying integer [`Type`].
+    pub underlying_type: Entity,
+    pub minimum_value: i64,
+    pub maximum_value: i64,
+}
