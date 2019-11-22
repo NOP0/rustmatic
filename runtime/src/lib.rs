@@ -13,7 +13,7 @@ slotmap::new_key_type! {
 }
 
 type Devices = DenseSlotMap<DeviceIndex, Box<dyn Device>>;
-type Channels = DenseSlotMap<ChannelIndex, Box<dyn Channel>>;
+//type Channels = DenseSlotMap<ChannelIndex, Box<dyn Channel>>;
 type ChannelsToDevices = SecondaryMap<ChannelIndex, DeviceIndex>;
 type DevicesToChannels = SecondaryMap<DeviceIndex, ChannelIndex>;
 type Processes = DenseSlotMap<ProcessIndex, Box<dyn Process<Fault = Fault>>>;
@@ -22,7 +22,7 @@ type Variables = DenseSlotMap<VariableIndex, Variable>;
 /// The PLC runtime.
 pub struct Runtime {
     pub(crate) devices: Devices,
-    pub(crate) channels: Channels,
+    //pub(crate) channels: Channels,
     pub(crate) processes: Processes,
     pub(crate) variables: Variables,
 }
@@ -32,7 +32,7 @@ impl Runtime {
     pub fn new() -> Self {
         Runtime {
             devices: Devices::with_key(),
-            channels: Channels::with_key(),
+            //channels: Channels::with_key(),
             processes: Processes::with_key(),
             variables: Variables::with_key(),
         }
@@ -105,17 +105,17 @@ struct Context<'a> {
 }
 
 impl<'a> System for Context<'a> {
-    fn get_digital_input(&self, _number: InputNumber) -> Option<bool> {
-        unimplemented!(
-            "TODO: Figure out which device corresponds to the InputNumber and defer to that"
-        )
-    }
+//    fn get_digital_input(&self, _number: InputNumber) -> Option<bool> {
+//        unimplemented!(
+//            "TODO: Figure out which device corresponds to the InputNumber and defer to that"
+        //)
+    //}
 
-    fn set_digital_output(&self, _number: OutputNumber, _state: bool) {
-        unimplemented!(
-            "TODO: Figure out which device corresponds to the OutputNumber and defer to that"
-        )
-    }
+    //fn set_digital_output(&self, _number: OutputNumber, _state: bool) {
+        //unimplemented!(
+            //"TODO: Figure out which device corresponds to the OutputNumber and defer to that"
+        //)
+    //}
 
     fn now(&self) -> Instant { Instant::now() }
 

@@ -10,7 +10,7 @@ use std::time::Instant;
 /// A [`System`] may be used concurrently by multiple [`Process`]es, so it will
 /// need to use some form of interior mutability.
 pub trait System {
-    /// Read the state of a single input pin.
+    /// Read the state of a single input
  //   fn get(&self, Channel) -> Option<bool>;
     /// Set the state of a single output pin.
 //   fn set_digital_output(&self, number: OutputNumber, state: bool);
@@ -58,49 +58,24 @@ pub enum Transition<F> {
 pub trait Device {
     /// A human-readable, one-line description of the device.
     fn description(&self) -> &str;
-//    fn get_channels(&self) -> Option<Vec<dyn Channel>;
 }
 
 /// Represents one IO point
-pub trait Channel {
-    type ChannelType: slotmap::Key;
-    fn get(&self, channel: ChannelIndex) -> Option<Self::ChannelType>;
-    fn set(&self, channel: ChannelIndex, state: Self::ChannelType);
+pub trait Channel<T> {
+    type KeyType : slotmap::Key;
+//    fn get(&self, channel: Self::KeyType) -> Option<T>;
+//    fn set(&self, channel: Self::KeyType, state: T);
 }
+
+
 
 /// Handle for Channels of type C
-pub type ChannelKey<C> = <C as Channel>::ChannelType;
+pub type ChannelKey<C,T> = <C as Channel<T>>::KeyType;
+type ChannelSlotMap<C,T> = slotmap::DenseSlotMap<ChannelKey<C,T>, C>;
 
-pub type ChannelSlotMap<C> = slotmap::DenseSlotMap<ChannelKey<C>, C>;
 
-pub struct ChannelsContainer<C: Channel>{
-    container : ChannelSlotMap<C>,
-}
 
-impl <C>ChannelsContainer<C>
-    where C: Channel{
-    pub fn new() -> Self{
-        ChannelsContainer{
-            container: ChannelSlotMap::with_key(),
-        }
-    }
 
-     pub fn insert (&mut self, channel: C) -> ChannelKey<C> {
-        self.container.insert(channel)
-
-    }
-
-    pub fn get(&self, key: ChannelKey<C>) -> Option<&C> {
-        self.container.get(key)
-    }
- 
- 
-    pub fn set(&mut self, key: ChannelKey<C>, state: C){
-        if let Some(x) = self.container.get_mut(key) {
-            *x = state;
-        }
-    }
-}
 
 /// All value types known to the PLC runtime.
 #[derive(Debug, Clone, PartialEq)]
@@ -110,3 +85,52 @@ pub enum Value {
     Double(f64),
     String(String),
 }
+
+// Channel trait implementations for built-in types
+
+
+slotmap::new_key_type! {pub struct BoolKey;}
+
+
+impl Channel<bool> for bool {
+    type KeyType = BoolKey;
+}
+
+
+
+
+pub struct ChannelContainer<C, T> 
+    where C: Channel<T>{
+    container : ChannelSlotMap<C,T>
+}
+
+impl <C, T>ChannelContainer<C, T>
+    where C: Channel<T>{
+    pub fn new() -> Self {
+        ChannelContainer{
+            container: slotmap::DenseSlotMap::with_key()
+        }
+    }
+
+    pub fn insert (&mut self, initial_value: C) -> ChannelKey<C,T> {
+        self.container.insert(initial_value)
+    
+        }
+    
+    pub fn get(&self, key: ChannelKey<C,T>) -> Option<&C> {
+        self.container.get(key)
+    }
+    
+    
+    pub fn set(&mut self, key: ChannelKey<C,T>, state: C){
+        if let Some(x) = self.container.get_mut(key) {
+            *x = state;
+        }
+    }
+}
+
+
+
+
+    
+    

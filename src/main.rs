@@ -1,27 +1,16 @@
-pub mod plc;
+use rustmatic_core::{ChannelContainer};
+use rustmatic_runtime;
 
 fn main() {
-    // bool example
-    let mut pi_bool: plc::ProcessImageInputs<bool> =
-        plc::ProcessImageInputs::new(1000);
+    
+    let mut my_bool_container = ChannelContainer::<bool, bool>::new();
 
-    let my_bool = pi_bool.insert(true);
+    let my_bool_handle = my_bool_container.insert(false);
 
-    println!("{:?}", pi_bool.get(my_bool).unwrap());
+    assert_eq!(*my_bool_container.get(my_bool_handle).unwrap(), false);
 
-    *(pi_bool.get_mut(my_bool).unwrap()) = false; // TODO: Poor ergonomics!
+    my_bool_container.set(my_bool_handle, true);
 
-    println!("{:?}", pi_bool.get(my_bool).unwrap());
-
-    // float example
-    let mut pi_float: plc::ProcessImageInputs<f64> =
-        plc::ProcessImageInputs::new(1000);
-
-    let my_float = pi_float.insert(10.0);
-
-    println!("{:?}", pi_float.get(my_float).unwrap());
-
-    *(pi_float.get_mut(my_float).unwrap()) = 13.0;
-
-    println!("{:?}", pi_float.get(my_float).unwrap());
+    assert_eq!(*my_bool_container.get(my_bool_handle).unwrap(), true);
+  
 }
