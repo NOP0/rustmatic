@@ -1,14 +1,13 @@
 //! The system in charge of working with IO and executing processes.
 
 use rustmatic_core::{
-    Device, InputNumber, OutputNumber, Process, System, Transition, Value,
+    Device, Channel, ChannelIndex, Process, System, Transition, Value,
     VariableIndex,
 };
 use slotmap::{DenseSlotMap, SecondaryMap};
 use std::{cell::RefCell, time::Instant};
 
 slotmap::new_key_type! {
-    pub struct ChannelIndex;
     pub struct DeviceIndex;
     pub struct ProcessIndex;
 }
@@ -16,6 +15,7 @@ slotmap::new_key_type! {
 type Devices = DenseSlotMap<DeviceIndex, Box<dyn Device>>;
 type Channels = DenseSlotMap<ChannelIndex, Box<dyn Channel>>;
 type ChannelsToDevices = SecondaryMap<ChannelIndex, DeviceIndex>;
+type DevicesToChannels = SecondaryMap<DeviceIndex, ChannelIndex>;
 type Processes = DenseSlotMap<ProcessIndex, Box<dyn Process<Fault = Fault>>>;
 type Variables = DenseSlotMap<VariableIndex, Variable>;
 

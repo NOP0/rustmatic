@@ -11,9 +11,9 @@ use std::time::Instant;
 /// need to use some form of interior mutability.
 pub trait System {
     /// Read the state of a single input pin.
-    fn get_digital_input(&self, number: InputNumber) -> Option<bool>;
+ //   fn get(&self, Channel) -> Option<bool>;
     /// Set the state of a single output pin.
-    fn set_digital_output(&self, number: OutputNumber, state: bool);
+//   fn set_digital_output(&self, number: OutputNumber, state: bool);
     /// Get the current time.
     fn now(&self) -> Instant;
     /// Declare a variable which can be accessed by the outside world.
@@ -30,10 +30,7 @@ pub trait System {
 
 slotmap::new_key_type! {
     /// An opaque handle that can be used to read from an input.
-    pub struct InputNumber;
-
-    /// An opaque handle that can be used to write to an output.
-    pub struct OutputNumber;
+    pub struct ChannelIndex;
 
     /// The handle used to access a variable.
     pub struct VariableIndex;
@@ -61,8 +58,48 @@ pub enum Transition<F> {
 pub trait Device {
     /// A human-readable, one-line description of the device.
     fn description(&self) -> &str;
-    fn get_digital_input(&self, number: InputNumber) -> Option<bool>;
-    fn set_digital_output(&self, number: OutputNumber, state: bool);
+//    fn get_channels(&self) -> Option<Vec<dyn Channel>;
+}
+
+/// Represents one IO point
+pub trait Channel {
+    type ChannelType: slotmap::Key;
+    fn get(&self, channel: ChannelIndex) -> Option<Self::ChannelType>;
+    fn set(&self, channel: ChannelIndex, state: Self::ChannelType);
+}
+
+/// Handle for Channels of type C
+pub type ChannelKey<C> = <C as Channel>::ChannelType;
+
+pub type ChannelSlotMap<C> = slotmap::DenseSlotMap<ChannelKey<C>, C>;
+
+pub struct ChannelsContainer<C: Channel>{
+    container : ChannelSlotMap<C>,
+}
+
+impl <C>ChannelsContainer<C>
+    where C: Channel{
+    pub fn new() -> Self{
+        ChannelsContainer{
+            container: ChannelSlotMap::with_key(),
+        }
+    }
+
+     pub fn insert (&mut self, channel: C) -> ChannelKey<C> {
+        self.container.insert(channel)
+
+    }
+
+    pub fn get(&self, key: ChannelKey<C>) -> Option<&C> {
+        self.container.get(key)
+    }
+ 
+ 
+    pub fn set(&mut self, key: ChannelKey<C>, state: C){
+        if let Some(x) = self.container.get_mut(key) {
+            *x = state;
+        }
+    }
 }
 
 /// All value types known to the PLC runtime.
