@@ -1,12 +1,7 @@
 //! The system in charge of working with IO and executing processes.
 
-pub mod device_manager;
-
-pub use device_manager::DeviceManager;
-
 use rustmatic_core::{
-    InputNumber, OutputNumber, Process, System, Transition, Value,
-    VariableIndex,
+    DeviceManager, Process, System, Transition, Value, VariableIndex,
 };
 use slotmap::DenseSlotMap;
 use std::{cell::RefCell, time::Instant};
@@ -62,7 +57,7 @@ impl Runtime {
         for (pid, process) in &mut self.processes {
             // set up the device context
             let ctx = Context {
-                _devices: &self.devices,
+                devices: &self.devices,
                 current_process: pid,
                 variables: RefCell::new(&mut self.variables),
             };
@@ -90,23 +85,13 @@ pub enum Fault {}
 /// The interface a [`Process`] can use to interact with the [`Device<T>`]s
 /// known by our [`Runtime`].
 struct Context<'a> {
-    _devices: &'a DeviceManager,
+    devices: &'a DeviceManager,
     variables: RefCell<&'a mut Variables>,
     current_process: ProcessIndex,
 }
 
 impl<'a> System for Context<'a> {
-    fn get_digital_input(&self, _number: InputNumber) -> Option<bool> {
-        unimplemented!(
-            "TODO: Figure out which device corresponds to the InputNumber and defer to that"
-        )
-    }
-
-    fn set_digital_output(&self, _number: OutputNumber, _state: bool) {
-        unimplemented!(
-            "TODO: Figure out which device corresponds to the OutputNumber and defer to that"
-        )
-    }
+    fn devices(&self) -> &DeviceManager { self.devices }
 
     fn now(&self) -> Instant { Instant::now() }
 

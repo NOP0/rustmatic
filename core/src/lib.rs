@@ -1,5 +1,9 @@
 //! Core abstractions and datatypes used by the rustmatic PLC environment.
 
+mod device_manager;
+
+pub use device_manager::{DeviceManager, Devices};
+
 use std::time::Instant;
 
 /// The interface exposed to a [`Process`] so it can interact with the outside
@@ -10,10 +14,8 @@ use std::time::Instant;
 /// A [`System`] may be used concurrently by multiple [`Process`]es, so it will
 /// need to use some form of interior mutability.
 pub trait System {
-    /// Read the state of a single input pin.
-    fn get_digital_input(&self, number: InputNumber) -> Option<bool>;
-    /// Set the state of a single output pin.
-    fn set_digital_output(&self, number: OutputNumber, state: bool);
+    /// Access the IO subsystem.
+    fn devices(&self) -> &DeviceManager;
     /// Get the current time.
     fn now(&self) -> Instant;
     /// Declare a variable which can be accessed by the outside world.
@@ -37,6 +39,9 @@ slotmap::new_key_type! {
 
     /// The handle used to access a variable.
     pub struct VariableIndex;
+
+    /// An opaque handle used to access a [`Device<T>`].
+    pub struct DeviceID;
 }
 
 /// A single thread of execution.

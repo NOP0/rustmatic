@@ -1,17 +1,13 @@
-use anymap::AnyMap;
-use rustmatic_core::{
-    Device, DeviceError, DeviceRegistrar, InputNumber, OutputNumber,
+use crate::{
+    Device, DeviceError, DeviceID, DeviceRegistrar, InputNumber, OutputNumber,
 };
+use anymap::AnyMap;
 use slotmap::DenseSlotMap;
 use std::{any::TypeId, collections::HashMap, sync::Arc};
 
 pub struct DeviceManager {
     devices: AnyMap,
     lookup_table: LookupTable,
-}
-
-slotmap::new_key_type! {
-    pub struct DeviceID;
 }
 
 pub type Devices<T> = DenseSlotMap<DeviceID, Arc<dyn Device<T>>>;
