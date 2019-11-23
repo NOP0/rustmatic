@@ -1,6 +1,6 @@
 # Devices and IO
 
-A [*Process*](./processes.md) can read values from inputs or write values to
+A [*Process*](processes.md) can read values from inputs or write values to
 outputs using a `Device`.
 
 Inputs and outputs are referred to via a symbolic `InputNumber` or 

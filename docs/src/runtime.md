@@ -1,10 +1,11 @@
 # Runtime
 
 The Rustmatic `Runtime` is the component in charge of process scheduling and
-providing an abstraction over the platform. This platform abstraction includes giving a 
-[*Process*](./processes.md) access to things like things like:
+providing an abstraction over the platform. This platform abstraction
+includes giving a [*Process*](processes.md) access to things like things
+like:
 
-- [IO](./devices.md)
+- [IO](devices.md)
 - timing
 - communication with the rest of the system via global variables
 - spawning other processes
