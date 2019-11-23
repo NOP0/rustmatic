@@ -57,6 +57,15 @@ pub enum Transition<F> {
     StillRunning,
 }
 
+/// The thing passed to a [`BaseDevice`] when registering a device with
+/// [`BaseDevice::register()`].
+pub trait DeviceRegistrar {
+    /// Marks a particular input as readable.
+    fn input(&mut self, number: InputNumber);
+    /// Marks a particular output as writeable.
+    fn output(&mut self, number: OutputNumber);
+}
+
 /// An individual IO device (e.g. Ethercat bus).
 ///
 /// # Note To Implementors
@@ -68,7 +77,12 @@ pub enum Transition<F> {
 pub trait Device<T> {
     /// A human-readable, one-line description of the device.
     fn description(&self) -> &str;
+
+    /// Notify the caller which inputs and outputs are supported.
+    fn register(&self, registrar: &mut dyn DeviceRegistrar);
+
     fn read(&self, number: InputNumber) -> Result<T, DeviceError>;
+
     fn write(
         &self,
         number: OutputNumber,

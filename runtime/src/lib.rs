@@ -1,6 +1,6 @@
 //! The system in charge of working with IO and executing processes.
 
-mod device_manager;
+pub mod device_manager;
 
 pub use device_manager::DeviceManager;
 
