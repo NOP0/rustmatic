@@ -1,8 +1,12 @@
 //! Core abstractions and datatypes used by the rustmatic PLC environment.
 
+mod device;
 mod device_manager;
 
-pub use device_manager::{DeviceManager, Devices};
+pub use crate::{
+    device::{Device, DeviceError, DeviceRegistrar},
+    device_manager::{DeviceManager, Devices},
+};
 
 use std::time::Instant;
 
@@ -60,44 +64,6 @@ pub enum Transition<F> {
     Fault(F),
     /// The [`Process`] is still running.
     StillRunning,
-}
-
-/// The thing passed to a [`Device<T>`] when registering a device with
-/// [`Device<T>::register()`].
-pub trait DeviceRegistrar {
-    /// Marks a particular input as readable.
-    fn input(&mut self, number: InputNumber);
-    /// Marks a particular output as writeable.
-    fn output(&mut self, number: OutputNumber);
-}
-
-/// An individual IO device (e.g. Ethercat bus).
-///
-/// # Note To Implementors
-///
-/// If the `index` is out of range, the `Device<T>` *must* fail early with
-/// [`DeviceError::UnknownNumber`]. This allows callers to test whether an
-/// input is supported by trying a `read()` or `write()` and checking for an
-/// error.
-pub trait Device<T> {
-    /// A human-readable, one-line description of the device.
-    fn description(&self) -> &str;
-
-    /// Notify the caller which inputs and outputs are supported.
-    fn register(&self, registrar: &mut dyn DeviceRegistrar);
-
-    fn read(&self, number: InputNumber) -> Result<T, DeviceError>;
-
-    fn write(
-        &self,
-        number: OutputNumber,
-        new_state: T,
-    ) -> Result<(), DeviceError>;
-}
-
-#[derive(Debug, Copy, Clone, PartialEq)]
-pub enum DeviceError {
-    UnknownNumber,
 }
 
 /// All value types known to the PLC runtime.
