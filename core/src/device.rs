@@ -1,13 +1,14 @@
 use crate::{InputNumber, OutputNumber};
+use std::{
+    error::Error,
+    fmt::{self, Display, Formatter},
+};
 
 /// An individual IO device (e.g. Ethercat bus).
 ///
 /// # Note To Implementors
 ///
-/// If the `index` is out of range, the `Device<T>` *must* fail early with
-/// [`DeviceError::UnknownNumber`]. This allows callers to test whether an
-/// input is supported by trying a `read()` or `write()` and checking for an
-/// error.
+/// Reading or writing should never block.
 pub trait Device<T> {
     /// A human-readable, one-line description of the device.
     fn description(&self) -> &str;
@@ -33,7 +34,34 @@ pub trait DeviceRegistrar {
     fn output(&mut self, number: OutputNumber);
 }
 
-#[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Debug)]
 pub enum DeviceError {
     UnknownNumber,
+    Other(Box<dyn Error>),
+}
+
+impl Display for DeviceError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        match self {
+            DeviceError::UnknownNumber => write!(f, "Unknown Number"),
+            DeviceError::Other(ref other) => Display::fmt(other, f),
+        }
+    }
+}
+
+impl Error for DeviceError {
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
+        match self {
+            DeviceError::UnknownNumber => None,
+            DeviceError::Other(ref other) => Some(&**other),
+        }
+    }
+}
+
+// We can't implement `From<E> where E: Error` because `DeviceError` implements 
+// `Error` and we'd overlap with `impl<T> From<T> for T` in std. That makes `?`
+// a lot less useful 😞
+
+impl From<Box<dyn Error>> for DeviceError {
+    fn from(other: Box<dyn Error>) -> DeviceError { DeviceError::Other(other) }
 }
