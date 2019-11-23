@@ -1,6 +1,6 @@
 # Summary
 
 - [Overview](./overview.md)
-- [Devices](./devices.md)
+- [Devices and IO](./devices.md)
 - [Runtime](./runtime.md)
 - [Processes](./processes.md)
