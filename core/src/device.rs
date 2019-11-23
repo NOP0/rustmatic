@@ -9,10 +9,10 @@ use std::{
 /// # Note To Implementors
 ///
 /// Reading or writing should never block.
-pub trait Device<T> {
-    /// A human-readable, one-line description of the device.
-    fn description(&self) -> &str;
-
+///
+/// The [`Device`] should print a concise human-readable description using
+/// [`Display`].
+pub trait Device<T>: Display {
     /// Notify the caller which inputs and outputs are supported.
     fn register(&self, registrar: &mut dyn DeviceRegistrar);
 
@@ -58,7 +58,7 @@ impl Error for DeviceError {
     }
 }
 
-// We can't implement `From<E> where E: Error` because `DeviceError` implements 
+// We can't implement `From<E> where E: Error` because `DeviceError` implements
 // `Error` and we'd overlap with `impl<T> From<T> for T` in std. That makes `?`
 // a lot less useful 😞
 
