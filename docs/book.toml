@@ -1,0 +1,6 @@
+[book]
+authors = ["NOP0 <33583294+NOP0@users.noreply.github.com>", "Michael Bryan <michaelfbryan@gmail.com>"]
+title = "Rustmatic Design Docs"
+
+[build]
+build-dir = "../target/design-docs"
