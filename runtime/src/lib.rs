@@ -87,7 +87,7 @@ impl Runtime {
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub enum Fault {}
 
-/// The interface a [`Process`] can use to interact with the [`Device`]s
+/// The interface a [`Process`] can use to interact with the [`Device<T>`]s
 /// known by our [`Runtime`].
 struct Context<'a> {
     _devices: &'a DeviceManager,

@@ -57,8 +57,8 @@ pub enum Transition<F> {
     StillRunning,
 }
 
-/// The thing passed to a [`BaseDevice`] when registering a device with
-/// [`BaseDevice::register()`].
+/// The thing passed to a [`Device<T>`] when registering a device with
+/// [`Device<T>::register()`].
 pub trait DeviceRegistrar {
     /// Marks a particular input as readable.
     fn input(&mut self, number: InputNumber);
