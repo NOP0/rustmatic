@@ -25,8 +25,8 @@ pub trait Device<T> {
     ) -> Result<(), DeviceError>;
 }
 
-/// The thing passed to a [`Device<T>`] when registering a device with
-/// [`Device<T>::register()`].
+/// The thing passed to a [`Device`] when registering a device with
+/// [`Device::register()`].
 pub trait DeviceRegistrar {
     /// Marks a particular input as readable.
     fn input(&mut self, number: InputNumber);

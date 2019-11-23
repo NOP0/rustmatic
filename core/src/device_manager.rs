@@ -5,12 +5,11 @@ use anymap::AnyMap;
 use slotmap::DenseSlotMap;
 use std::{any::TypeId, collections::HashMap, sync::Arc};
 
+/// A collection of [`Device`]s.
 pub struct DeviceManager {
     devices: AnyMap,
     lookup_table: LookupTable,
 }
-
-pub type Devices<T> = DenseSlotMap<DeviceID, Arc<dyn Device<T>>>;
 
 impl DeviceManager {
     pub fn new() -> Self {
@@ -35,7 +34,7 @@ impl DeviceManager {
             .entry::<Devices<T>>()
             .or_insert_with(Devices::<T>::default);
 
-        let id = devices.insert(Arc::clone(&device));
+        let id = devices.0.insert(Arc::clone(&device));
         self.lookup_table.register(id, &*device);
 
         id
@@ -52,7 +51,7 @@ impl DeviceManager {
 
         let device = self
             .of_type::<T>()
-            .and_then(|devices| devices.get(device_id))
+            .and_then(|devices| devices.0.get(device_id))
             .ok_or(DeviceError::UnknownNumber)?;
 
         device.read(number)
@@ -84,7 +83,7 @@ impl DeviceManager {
 
         let device = self
             .of_type::<T>()
-            .and_then(|devices| devices.get(device_id))
+            .and_then(|devices| devices.0.get(device_id))
             .ok_or(DeviceError::UnknownNumber)?;
 
         device.write(number, new_state)
@@ -107,13 +106,22 @@ impl DeviceManager {
     }
 }
 
-/// A lookup table which lets you look the [`Device<T>`] which can read an
+/// The type returned from [`DeviceManager::of_type()`]. You probably don't want
+/// want to use this directly.
+#[derive(Clone)]
+pub struct Devices<T>(DenseSlotMap<DeviceID, Arc<dyn Device<T>>>);
+
+impl<T> Default for Devices<T> {
+    fn default() -> Devices<T> { Devices(DenseSlotMap::with_key()) }
+}
+
+/// A lookup table which lets you look the [`Device`] which can read an
 /// input (or output) based on the [`InputNumber`] and type being read/written
 /// (via [`TypeId`]).
 #[derive(Debug, Default, Clone, PartialEq)]
 struct LookupTable {
     // FIXME: Do we actually care about TypeId here? Or could we just record
-    // the input/output number and then let the lookup into `Devices<T>`
+    // the input/output number and then let the lookup into `Devices`
     // error out?
     inputs: HashMap<(InputNumber, TypeId), DeviceID>,
     outputs: HashMap<(OutputNumber, TypeId), DeviceID>,
@@ -137,7 +145,7 @@ impl LookupTable {
     }
 
     /// Updates the internal bookkeeping used to track which inputs/outputs a
-    /// particular [`Device<T>`] can read from or write to.
+    /// particular [`Device`] can read from or write to.
     fn register<D, T>(&mut self, id: DeviceID, device: &D)
     where
         D: Device<T> + ?Sized,

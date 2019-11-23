@@ -44,7 +44,7 @@ slotmap::new_key_type! {
     /// The handle used to access a variable.
     pub struct VariableIndex;
 
-    /// An opaque handle used to access a [`Device<T>`].
+    /// An opaque handle used to access a [`Device`].
     pub struct DeviceID;
 }
 
