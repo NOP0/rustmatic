@@ -1,8 +1,7 @@
 //! The system in charge of working with IO and executing processes.
 
 use rustmatic_core::{
-    Device, InputNumber, OutputNumber, Process, System, Transition, Value,
-    VariableIndex,
+    DeviceManager, Process, System, Transition, Value, VariableIndex,
 };
 use slotmap::DenseSlotMap;
 use std::{cell::RefCell, time::Instant};
@@ -12,13 +11,12 @@ slotmap::new_key_type! {
     pub struct ProcessIndex;
 }
 
-type Devices = DenseSlotMap<DeviceIndex, Box<dyn Device>>;
 type Processes = DenseSlotMap<ProcessIndex, Box<dyn Process<Fault = Fault>>>;
 type Variables = DenseSlotMap<VariableIndex, Variable>;
 
 /// The PLC runtime.
 pub struct Runtime {
-    pub(crate) devices: Devices,
+    pub(crate) devices: DeviceManager,
     pub(crate) processes: Processes,
     pub(crate) variables: Variables,
 }
@@ -27,17 +25,10 @@ impl Runtime {
     /// Create an empty [`Runtime`].
     pub fn new() -> Self {
         Runtime {
-            devices: Devices::with_key(),
+            devices: DeviceManager::new(),
             processes: Processes::with_key(),
             variables: Variables::with_key(),
         }
-    }
-
-    /// Get an iterator over all known devices.
-    pub fn iter_devices<'this>(
-        &'this self,
-    ) -> impl Iterator<Item = &'this dyn Device> + 'this {
-        self.devices.iter().map(|(_key, boxed)| &**boxed)
     }
 
     /// Get an iterator over all known processes.
@@ -66,7 +57,7 @@ impl Runtime {
         for (pid, process) in &mut self.processes {
             // set up the device context
             let ctx = Context {
-                _devices: &self.devices,
+                devices: &self.devices,
                 current_process: pid,
                 variables: RefCell::new(&mut self.variables),
             };
@@ -91,26 +82,16 @@ impl Runtime {
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub enum Fault {}
 
-/// The interface a [`Process`] can use to interact with the [`Device`]s
+/// The interface a [`Process`] can use to interact with the [`Device<T>`]s
 /// known by our [`Runtime`].
 struct Context<'a> {
-    _devices: &'a Devices,
+    devices: &'a DeviceManager,
     variables: RefCell<&'a mut Variables>,
     current_process: ProcessIndex,
 }
 
 impl<'a> System for Context<'a> {
-    fn get_digital_input(&self, _number: InputNumber) -> Option<bool> {
-        unimplemented!(
-            "TODO: Figure out which device corresponds to the InputNumber and defer to that"
-        )
-    }
-
-    fn set_digital_output(&self, _number: OutputNumber, _state: bool) {
-        unimplemented!(
-            "TODO: Figure out which device corresponds to the OutputNumber and defer to that"
-        )
-    }
+    fn devices(&self) -> &DeviceManager { self.devices }
 
     fn now(&self) -> Instant { Instant::now() }
 
