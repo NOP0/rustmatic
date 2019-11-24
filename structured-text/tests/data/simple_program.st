@@ -9,4 +9,4 @@ PROGRAM stexample
   END_REPEAT;
 END_PROGRAM;
 
-(* https://www.plcacademy.com/structured-text-tutorial/ *)
+// https://www.plcacademy.com/structured-text-tutorial/

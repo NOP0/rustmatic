@@ -10,6 +10,11 @@ fn to_span(pest_span: pest::Span<'_>) -> Span {
     Span::new(pest_span.start() as u32, pest_span.end() as u32)
 }
 
+fn preamble(pair: Pair<'_, Rule>) -> Result<Vec<VarBlock>, ParseError> {
+    ParseError::expect_rule(Rule::preamble, &pair)?;
+    pair.into_inner().map(VarBlock::from_pair).collect()
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct Program {
     pub name: Identifier,
@@ -25,16 +30,8 @@ impl Program {
         let span = to_span(pair.as_span());
 
         let mut items = pair.into_inner();
-
         let name = Identifier::from_pair(items.next().unwrap())?;
-
-        let var_blocks = items
-            .next()
-            .unwrap()
-            .into_inner()
-            .map(VarBlock::from_pair)
-            .collect::<Result<Vec<_>, _>>()?;
-
+        let var_blocks = preamble(items.next().unwrap())?;
         let body = Block::from_pair(items.next().unwrap())?;
 
         Ok(Program {
@@ -128,6 +125,7 @@ impl VarBlockKind {
 pub struct VariableDeclaration {
     pub name: Identifier,
     pub declared_type: Identifier,
+    pub initial_value: Option<Expression>,
     pub span: Span,
 }
 
@@ -143,10 +141,17 @@ impl VariableDeclaration {
         let name = Identifier::from_pair(items.next().unwrap())?;
         let declared_type = Identifier::from_pair(items.next().unwrap())?;
 
+        // dont' forget to step past the assignment, if there was one
+        let initial_value = match items.skip(1).next() {
+            Some(pair) => Some(Expression::from_pair(pair)?),
+            None => None,
+        };
+
         Ok(VariableDeclaration {
             span,
             name,
             declared_type,
+            initial_value,
         })
     }
 }
@@ -530,6 +535,7 @@ mod tests {
                 value: String::from("u32"),
                 span: Span::new(4, 7),
             },
+            initial_value: None,
             span: Span::new(0, 7),
         };
 
@@ -541,6 +547,46 @@ mod tests {
                 variable_decl(0, 7, [
                     identifier(0, 1),
                     identifier(4, 7),
+                ])
+            ]
+        }
+
+        let got = VariableDeclaration::from_str(src).unwrap();
+
+        assert_eq!(got, expected);
+    }
+
+    #[test]
+    fn variable_decl_with_default_value() {
+        let src = "x: INTEGER := 42";
+        let expected = VariableDeclaration {
+            name: Identifier {
+                value: String::from("x"),
+                span: Span::new(0, 1),
+            },
+            declared_type: Identifier {
+                value: String::from("INTEGER"),
+                span: Span::new(3, 10),
+            },
+            initial_value: Some(Expression::Literal(Literal::Integer(
+                IntegerLiteral {
+                    value: 42,
+                    span: Span::new(14, 16),
+                },
+            ))),
+            span: Span::new(0, 16),
+        };
+
+        parses_to! {
+            parser: RawParser,
+            input: src,
+            rule: Rule::variable_decl,
+            tokens: [
+                variable_decl(0, 16, [
+                    identifier(0, 1),
+                    identifier(3, 10),
+                    assign(11, 13),
+                    integer(14, 16, [integer_decimal(14, 16)]),
                 ])
             ]
         }
@@ -804,6 +850,7 @@ mod tests {
                         value: String::from("BOOL"),
                         span: Span::new(8, 12),
                     },
+                    initial_value: None,
                     span: Span::new(4, 12),
                 },
                 VariableDeclaration {
@@ -815,6 +862,7 @@ mod tests {
                         value: String::from("INTEGER"),
                         span: Span::new(27, 34),
                     },
+                    initial_value: None,
                     span: Span::new(14, 34),
                 },
             ],
@@ -871,6 +919,7 @@ mod tests {
                         value: String::from("INTEGER"),
                         span: Span::new(65, 72),
                     },
+                    initial_value: None,
                     span: Span::new(53, 72),
                 }],
                 kind: VarBlockKind::Global,

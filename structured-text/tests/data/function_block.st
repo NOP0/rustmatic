@@ -1,8 +1,7 @@
-// see https://en.wikipedia.org/wiki/Structured_text#Function_block_example
-//=======================================================================
-// Function Block Timed Counter :  Incremental count of the timed interval
-//=======================================================================
 FUNCTION_BLOCK FB_Timed_Counter
+    //=======================================================================
+    // Function Block Timed Counter :  Incremental count of the timed interval
+    //=======================================================================
     VAR_INPUT
         Execute         : BOOL := FALSE;        // Trigger signal to begin Timed Counting
         Time_Increment  : REAL := 1.25;         // Enter Cycle Time (Seconds) between counts
@@ -39,3 +38,5 @@ FUNCTION_BLOCK FB_Timed_Counter
     Count_Complete := CycleCounter.q;
     
 END_FUNCTION_BLOCK
+
+// https://en.wikipedia.org/wiki/Structured_text#Function_block_example

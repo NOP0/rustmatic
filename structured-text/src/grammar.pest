@@ -1,59 +1,30 @@
-file = {
-    SOI ~ (program | function_block)* ~ EOI
-}
+file = { SOI ~ (program | function_block)* ~ EOI }
 
-program = {
-    ^"program" ~ identifier ~ preamble ~ 
-    block ~
-    ^"end_program" ~ ";"?
-}
-
+program = { ^"program" ~ identifier ~ preamble ~ block ~ ^"end_program" ~ ";"? }
 function_block = {
-    ^"function_block" ~ ^"end_function_block" ~ ";"?
+    ^"function_block" ~ identifier ~ preamble ~ block ~ ^"end_function_block" ~ ";"?
 }
 
-preamble = {
-    var_block*
-}
+preamble = { var_block* }
 
-var_block = {
-    var_block_kind ~ (variable_decl ~ ";")* ~ ^"end_var"
-}
-
+var_block                   = { var_block_kind ~ (variable_decl ~ ";")* ~ ^"end_var" }
+variable_decl               = { identifier ~ ":" ~ identifier ~ (assign ~ expression)? }
 var_block_kind = _{ 
     global_var_block | external_var_block | input_var_block | output_var_block |
     normal_var_block 
 }
+normal_var_block            = { ^"var" }
+global_var_block            = { ^"var_global" }
+external_var_block          = { ^"var_external" }
+input_var_block             = { ^"var_input" }
+output_var_block            = { ^"var_output" }
 
-normal_var_block = { ^"var" }
-global_var_block = { ^"var_global" }
-external_var_block = { ^"var_external" }
-input_var_block = { ^"var_input" }
-output_var_block = { ^"var_output" }
+block                       = { statement* }
+statement                   = { (assignment| repeat) ~ ";" }
+assignment                  = { identifier ~ assign ~ expression }
 
-variable_decl = {
-    identifier ~ ":" ~ identifier
-}
-
-block = {
-    statement*
-}
-
-statement = {
-    (assignment| repeat) ~ ";"
-}
-
-repeat = {
-    ^"repeat" ~ repeat_body ~ ^"end_repeat"
-}
-
-repeat_body = _{
-    block ~ ^"until" ~ assignment ~ ";" 
-}
-
-assignment = {
-    identifier ~ assign ~ expression
-}
+repeat                      = { ^"repeat" ~ repeat_body ~ ^"end_repeat" }
+repeat_body                 = _{ block ~ ^"until" ~ assignment ~ ";" }
 
 expression                  = _{ infix | expression_inner }
 infix                       =  { expression_inner ~ (binary_operator ~ expression_inner)+ }
