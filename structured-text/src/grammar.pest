@@ -3,8 +3,8 @@ file = {
 }
 
 program = {
-    ^"program" ~ identifier ~ var_block ? ~ 
-    statement* ~
+    ^"program" ~ identifier ~ var_block? ~ 
+    block ~
     ^"end_program" ~ ";"?
 }
 
@@ -20,6 +20,10 @@ variable_decl = {
     identifier ~ ":" ~ identifier
 }
 
+block = {
+    statement*
+}
+
 statement = {
     (assignment| repeat) ~ ";"
 }
@@ -28,8 +32,8 @@ repeat = {
     ^"repeat" ~ repeat_body ~ ^"end_repeat"
 }
 
-repeat_body = {
-    (!^"until" ~ statement)* ~ ^"until" ~ assignment ~ ";" 
+repeat_body = _{
+    block ~ ^"until" ~ assignment ~ ";" 
 }
 
 assignment = {

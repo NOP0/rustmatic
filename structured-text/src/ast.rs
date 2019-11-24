@@ -78,6 +78,72 @@ impl Expression {
     }
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub struct Repeat {
+    pub block: Block,
+    pub condition: Assignment,
+    pub span: Span,
+}
+
+impl Repeat {
+    fn from_pair(pair: Pair<'_, Rule>) -> Result<Repeat, ParseError> {
+        ParseError::expect_rule(Rule::repeat, &pair)?;
+
+        let span = to_span(pair.as_span());
+
+        let mut items = pair.into_inner();
+        let block = Block::from_pair(items.next().unwrap())?;
+        let condition = Assignment::from_pair(items.next().unwrap())?;
+
+        Ok(Repeat {
+            block,
+            condition,
+            span,
+        })
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Block {
+    pub statements: Vec<Statement>,
+    pub span: Span,
+}
+
+impl Block {
+    fn from_pair(pair: Pair<'_, Rule>) -> Result<Block, ParseError> {
+        ParseError::expect_rule(Rule::block, &pair)?;
+
+        let span = to_span(pair.as_span());
+        let statements = pair
+            .into_inner()
+            .map(Statement::from_pair)
+            .collect::<Result<Vec<_>, _>>()?;
+
+        Ok(Block { statements, span })
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum Statement {
+    Assignment(Assignment),
+}
+
+impl Statement {
+    fn from_pair(pair: Pair<'_, Rule>) -> Result<Statement, ParseError> {
+        if pair.as_rule() == Rule::statement {}
+
+        match pair.as_rule() {
+            Rule::statement => {
+                Statement::from_pair(pair.into_inner().next().unwrap())
+            },
+            Rule::assignment => {
+                Ok(Statement::Assignment(Assignment::from_pair(pair)?))
+            },
+            _ => unimplemented!(),
+        }
+    }
+}
+
 /// An assignment statement (e.g. `x := 42`).
 #[derive(Debug, Clone, PartialEq)]
 pub struct Assignment {
@@ -299,6 +365,8 @@ impl_from_str! {
     FloatLiteral => float,
     IntegerLiteral => integer,
     BooleanLiteral => boolean,
+    Statement => statement,
+    Repeat => repeat,
 }
 
 #[cfg(test)]
@@ -532,6 +600,67 @@ mod tests {
         }
 
         let got = IntegerLiteral::from_str(src).unwrap();
+
+        assert_eq!(got, expected);
+    }
+
+    #[test]
+    fn simple_repeat() {
+        let src = "REPEAT \nx := FALSE;\nUNTIL x := FALSE;\nEND_REPEAT;";
+        let expected = Repeat {
+            block: Block {
+                statements: vec![Statement::Assignment(Assignment {
+                    variable: Identifier {
+                        value: String::from("x"),
+                        span: Span::new(8, 9),
+                    },
+                    value: Arc::new(Expression::Variable(Identifier {
+                        value: String::from("FALSE"),
+                        span: Span::new(13, 18),
+                    })),
+                    span: Span::new(8, 18),
+                })],
+                span: Span::new(8, 19),
+            },
+            condition: Assignment {
+                variable: Identifier {
+                    value: String::from("x"),
+                    span: Span::new(26, 27),
+                },
+                value: Arc::new(Expression::Variable(Identifier {
+                    value: String::from("FALSE"),
+                    span: Span::new(31, 36),
+                })),
+                span: Span::new(26, 36),
+            },
+            span: Span::new(0, 48),
+        };
+
+        parses_to! {
+            parser: RawParser,
+            input: src,
+            rule: Rule::repeat,
+            tokens: [
+                repeat(0, 48, [
+                        block(8, 19, [
+                            statement(8, 19, [
+                                assignment(8, 18, [
+                                    identifier(8, 9),
+                                    assign(10, 12),
+                                    identifier(13, 18),
+                                ])
+                            ])
+                        ]),
+                        assignment(26, 36, [
+                            identifier(26, 27),
+                            assign(28, 30),
+                            identifier(31, 36),
+                        ])
+                ]),
+            ]
+        }
+
+        let got = Repeat::from_str(src).unwrap();
 
         assert_eq!(got, expected);
     }
