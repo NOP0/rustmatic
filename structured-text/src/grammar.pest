@@ -25,28 +25,104 @@ statement = {
 }
 
 repeat = {
-    ^"repeat" ~ 
-        (!^"until" ~ statement)* ~ 
-    ^"until" ~ assignment ~ ";" 
-    ~ ^"end_repeat"
+    ^"repeat" ~ repeat_body ~ ^"end_repeat"
+}
+
+repeat_body = {
+    (!^"until" ~ statement)* ~ ^"until" ~ assignment ~ ";" 
 }
 
 assignment = {
-    identifier ~ ":=" ~ expression
+    identifier ~ assign ~ expression
 }
 
-expression = { identifier }
+expression                  = _{ infix | expression_inner }
+infix                       =  { expression_inner ~ (binary_operator ~ expression_inner)+ }
+expression_inner            = _{ if_expression | unary | identifier | braced_expression }
+braced_expression           = _{ "(" ~ expression ~ ")" }
+unary                       =  { unary_operator ~ (literal | identifier | braced_expression) }
 
-binary_expression = { expression ~ bin_op ~ expression }
+literal                     = _{ boolean | float | integer | string }
 
-bin_op = { "+" }
+boolean                     =  { boolean_true | boolean_false }
+boolean_true                =  { ^"true" }
+boolean_false               =  { ^"false" }
 
-conditional = {
+float                       = ${ float_characteristic ~ "." ~ float_mantissa }
+float_characteristic        =  { "0" | (('1'..'9') ~ ('0'..'9' | "_")*) }
+float_mantissa              =  { ('0'..'9')+ }
+
+integer                     = ${ integer_hexadecimal_sigil | integer_binary_sigil | integer_decimal | integer_zero }
+integer_decimal             =  { '1'..'9' ~ ('0'..'9' | "_")* }
+integer_hexadecimal_sigil   = _{ "0x" ~ integer_hexadecimal }
+integer_hexadecimal         =  { ('0'..'9' | 'a'..'f' | 'A'..'F') ~ ('0'..'9' | 'a'..'f' | 'A'..'F' | "_")* }
+integer_binary_sigil        = _{ "0b" ~ integer_binary }
+integer_binary              =  { ('0'..'1') ~ ('0'..'1' | "_")* }
+integer_zero                =  { "0" }
+
+string                      = ${ string_single_line }
+string_single_line          = _{ string_delimiter ~ string_content ~ string_delimiter }
+string_content              = ${ (string_escape | !(string_delimiter | "\\") ~ ANY)* }
+string_delimiter            = _{ "\"" }
+string_unicode              = _{ "u" ~ ('0'..'9' | 'a'..'f' | 'A'..'F'){4} }
+string_escape               = _{ "\\" ~ ("\"" | "\\" | "a" | "b" | "f" | "n" | "r" | "t" | "v" | string_unicode) }
+
+multiply                    =  { "*" }
+divide                      =  { "/" }
+modulus                     =  { "%" }
+plus                        =  { "+" }
+minus                       =  { "-" }
+less_than                   =  { "<" }
+less_than_or_equal          =  { "<=" }
+greater_than                =  { ">" }
+greater_than_or_equal       =  { ">=" }
+not_equal                   =  { "!=" }
+equal                       =  { "=" }
+assign                      =  { ":=" }
+
+binary_operator             = _{
+                                 multiply | divide | modulus |
+                                 plus | minus |
+                                 less_than_or_equal | less_than |
+                                 greater_than_or_equal | greater_than |
+                                 not_equal | equal 
+                               }
+unary_operator              = _{ plus | minus }
+
+keyword = {
+    ^"at" | 
+    ^"configuration" | 
+    ^"do" |
+    ^"else" | 
+    ^"elsif" | 
+    ^"end_configuration" | 
+    ^"end_function_block" | 
+    ^"end_if" | 
+    ^"end_program" | 
+    ^"end_repeat" |
+    ^"end_while" | 
+    ^"function_block" | 
+    ^"if" | 
+    ^"program" | 
+    ^"repeat" | 
+    ^"task" | 
+    ^"then" | 
+    ^"until" | 
+    ^"var_external" | 
+    ^"var_global" | 
+    ^"var_input" | 
+    ^"var_output" | 
+    ^"var" | 
+    ^"while" | 
+    ^"with" 
+}
+
+if_expression = {
     ^"if"
 }
 
 identifier = @{
-    ASCII_ALPHA ~ (ASCII_ALPHANUMERIC | "_")*
+    !keyword ~ ASCII_ALPHA ~ (ASCII_ALPHANUMERIC | "_")*
 }
 
 WHITESPACE = _{ " " | "\t" | NEWLINE }

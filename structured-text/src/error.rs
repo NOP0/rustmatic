@@ -15,6 +15,19 @@ pub struct ParseError {
 }
 
 impl ParseError {
+    pub(crate) fn custom<S: Into<String>>(
+        message: S,
+        span: pest::Span<'_>,
+    ) -> ParseError {
+        let variant = ErrorVariant::CustomError {
+            message: message.into(),
+        };
+
+        ParseError {
+            inner: PestError::new_from_span(variant, span),
+        }
+    }
+
     pub(crate) fn expect_rule(
         rule: Rule,
         pair: &Pair<'_, Rule>,
