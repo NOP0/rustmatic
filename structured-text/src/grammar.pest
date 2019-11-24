@@ -1,9 +1,21 @@
-field = { (ASCII_DIGIT | "." | "-")+ }
-record = { field ~ ("," ~ field)* }
-file = { SOI ~ (record ~ ("\r\n" | "\n"))* ~ EOI }
 
-WHITESPACE = _{ " " | "\t" | "\n" }
+program = {
+    ^"program" ~ ^"end_program" ~ ";"?
+}
+function_block = {
+    ^"function_block" ~ ^"end_function_block" ~ ";"?
+}
+
+conditional = {
+    ^"if"
+}
+
+identifier = {
+    ASCII_ALPHA ~ (ASCII_ALPHANUMERIC | "_")*
+}
+
+WHITESPACE = _{ " " | "\t" | NEWLINE }
 COMMENT = _{ 
     ( "(*" ~ (!"*)" ~ ANY)* ~ "*)" )  | 
-    ( "//" ~ (!"\n" ~ ANY)* )
+    ( "//" ~ (!NEWLINE ~ ANY)* )
 }
