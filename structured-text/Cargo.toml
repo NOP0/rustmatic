@@ -1,0 +1,16 @@
+[package]
+name = "rustmatic-structured-text"
+version = "0.1.0"
+authors = ["Michael Bryan <michaelfbryan@gmail.com>"]
+edition = "2018"
+description = "A parser for the Structured Text IEC 61131-3 language."
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+codespan = "0.5.0"
+pest = "2.1.2"
+pest_derive = "2.1.0"
+
+[dev-dependencies]
+pretty_assertions = "0.6.1"
