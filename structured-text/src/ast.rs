@@ -165,7 +165,7 @@ pub enum Literal {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct IntegerLiteral {
-    pub value: String,
+    pub value: u64,
     pub span: Span,
 }
 
@@ -173,16 +173,42 @@ impl IntegerLiteral {
     fn from_pair(pair: Pair<'_, Rule>) -> Result<IntegerLiteral, ParseError> {
         let span = to_span(pair.as_span());
 
-        match pair.as_rule() {
-            Rule::integer => {
-                IntegerLiteral::from_pair(pair.into_inner().next().unwrap())
-            },
-            Rule::integer_decimal => Ok(IntegerLiteral {
-                value: pair.as_str().parse().unwrap(),
+        if pair.as_rule() == Rule::integer {
+            // we need to re-wrap the IntegerLiteral so the span includes
+            // the leading 0x or 0b sigil
+            let lit =
+                IntegerLiteral::from_pair(pair.into_inner().next().unwrap())?;
+
+            return Ok(IntegerLiteral {
+                value: lit.value,
                 span,
-            }),
-            _ => unimplemented!(),
+            });
         }
+
+        let radix = match pair.as_rule() {
+            Rule::integer_decimal => 10,
+            Rule::integer_hexadecimal => 16,
+            Rule::integer_binary => 2,
+            _ => {
+                return Err(PestError::new_from_span(
+                    PestErrorVariant::ParsingError {
+                        positives: vec![
+                            Rule::integer_decimal,
+                            Rule::integer_hexadecimal,
+                            Rule::integer_binary,
+                        ],
+                        negatives: vec![],
+                    },
+                    pair.as_span(),
+                )
+                .into());
+            },
+        };
+
+        Ok(IntegerLiteral {
+            value: u64::from_str_radix(pair.as_str(), radix).unwrap(),
+            span,
+        })
     }
 }
 
@@ -470,7 +496,7 @@ mod tests {
     fn parse_an_integer() {
         let src = "42";
         let expected = IntegerLiteral {
-            value: src.to_string(),
+            value: 42,
             span: Span::new(0, 2),
         };
 
@@ -480,6 +506,28 @@ mod tests {
             rule: Rule::integer,
             tokens: [
                 integer(0, 2, [integer_decimal(0, 2)]),
+            ]
+        }
+
+        let got = IntegerLiteral::from_str(src).unwrap();
+
+        assert_eq!(got, expected);
+    }
+
+    #[test]
+    fn parse_a_hex_integer() {
+        let src = "0xdeadbeef";
+        let expected = IntegerLiteral {
+            value: 0xdeadbeef,
+            span: Span::new(0, 10),
+        };
+
+        parses_to! {
+            parser: RawParser,
+            input: src,
+            rule: Rule::integer,
+            tokens: [
+                integer(0, 10, [integer_hexadecimal(2, 10)]),
             ]
         }
 

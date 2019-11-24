@@ -54,9 +54,9 @@ float_mantissa              =  { ('0'..'9')+ }
 
 integer                     = ${ integer_hexadecimal_sigil | integer_binary_sigil | integer_decimal | integer_zero }
 integer_decimal             =  { '1'..'9' ~ ('0'..'9' | "_")* }
-integer_hexadecimal_sigil   = _{ "0x" ~ integer_hexadecimal }
+integer_hexadecimal_sigil   = _{ ^"0x" ~ integer_hexadecimal }
 integer_hexadecimal         =  { ('0'..'9' | 'a'..'f' | 'A'..'F') ~ ('0'..'9' | 'a'..'f' | 'A'..'F' | "_")* }
-integer_binary_sigil        = _{ "0b" ~ integer_binary }
+integer_binary_sigil        = _{ ^"0b" ~ integer_binary }
 integer_binary              =  { ('0'..'1') ~ ('0'..'1' | "_")* }
 integer_zero                =  { "0" }
 
