@@ -37,20 +37,14 @@ pub struct VarBlock {
 
 impl VarBlock {
     fn from_pair(pair: Pair<'_, Rule>) -> Result<VarBlock, ParseError> {
+        ParseError::expect_rule(Rule::var_block, &pair)?;
+
         let span = to_span(pair.as_span());
+        let mut items = pair.into_inner();
 
-        let kind = match pair.as_rule() {
-            Rule::var_block => VarBlockKind::Normal,
-            _ => {
-                return Err(ParseError::expected_one_of(
-                    &[Rule::var_block],
-                    pair.as_span(),
-                ))
-            },
-        };
+        let kind = VarBlockKind::from_pair(items.next().unwrap())?;
 
-        let declarations = pair
-            .into_inner()
+        let declarations = items
             .map(VariableDeclaration::from_pair)
             .collect::<Result<Vec<_>, _>>()?;
 
@@ -65,6 +59,32 @@ impl VarBlock {
 #[derive(Debug, Clone, PartialEq)]
 pub enum VarBlockKind {
     Normal,
+    Global,
+    External,
+    Input,
+    Output,
+}
+
+impl VarBlockKind {
+    fn from_pair(pair: Pair<'_, Rule>) -> Result<VarBlockKind, ParseError> {
+        match pair.as_rule() {
+            Rule::normal_var_block => Ok(VarBlockKind::Normal),
+            Rule::global_var_block => Ok(VarBlockKind::Global),
+            Rule::external_var_block => Ok(VarBlockKind::External),
+            Rule::input_var_block => Ok(VarBlockKind::Input),
+            Rule::output_var_block => Ok(VarBlockKind::Output),
+            _ => Err(ParseError::expected_one_of(
+                &[
+                    Rule::var_block,
+                    Rule::global_var_block,
+                    Rule::external_var_block,
+                    Rule::input_var_block,
+                    Rule::output_var_block,
+                ],
+                pair.as_span(),
+            )),
+        }
+    }
 }
 
 /// A single variable declaration (e.g. `x: BOOL`).
@@ -391,7 +411,8 @@ impl_from_str! {
     BooleanLiteral => boolean,
     Statement => statement,
     Repeat => repeat,
-    VarBlock => any_var_block,
+    VarBlock => var_block,
+    VarBlockKind => var_block_kind,
 }
 
 #[cfg(test)]
@@ -728,6 +749,7 @@ mod tests {
             rule: Rule::var_block,
             tokens: [
                 var_block(0, 43, [
+                    normal_var_block(0, 3),
                     variable_decl(4, 12, [
                         identifier(4, 5),
                         identifier(8, 12),

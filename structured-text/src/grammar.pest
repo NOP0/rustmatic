@@ -13,14 +13,22 @@ function_block = {
 }
 
 preamble = {
-    any_var_block*
+    var_block*
 }
-
-any_var_block = _{ var_block }
 
 var_block = {
-    ^"var" ~ (variable_decl ~ ";")* ~ ^"end_var"
+    var_block_kind ~ (variable_decl ~ ";")* ~ ^"end_var"
 }
+
+var_block_kind = _{ 
+    global_var_block | external_var_block | input_var_block | output_var_block |
+    normal_var_block 
+    }
+normal_var_block = { ^"var" }
+global_var_block = { ^"var_global" }
+external_var_block = { ^"var_external" }
+input_var_block = { ^"var_input" }
+output_var_block = { ^"var_output" }
 
 variable_decl = {
     identifier ~ ":" ~ identifier
