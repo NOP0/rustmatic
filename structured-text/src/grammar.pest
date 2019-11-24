@@ -3,7 +3,7 @@ file = {
 }
 
 program = {
-    ^"program" ~ identifier ~ var_block? ~ 
+    ^"program" ~ identifier ~ preamble ~ 
     block ~
     ^"end_program" ~ ";"?
 }
@@ -11,6 +11,12 @@ program = {
 function_block = {
     ^"function_block" ~ ^"end_function_block" ~ ";"?
 }
+
+preamble = {
+    any_var_block*
+}
+
+any_var_block = _{ var_block }
 
 var_block = {
     ^"var" ~ (variable_decl ~ ";")* ~ ^"end_var"

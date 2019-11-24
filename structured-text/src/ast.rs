@@ -3,11 +3,7 @@ use crate::{
     ParseError,
 };
 use codespan::Span;
-use pest::{
-    error::{Error as PestError, ErrorVariant as PestErrorVariant},
-    iterators::Pair,
-    Parser,
-};
+use pest::{iterators::Pair, Parser};
 use std::{str::FromStr, sync::Arc};
 
 fn to_span(pest_span: pest::Span<'_>) -> Span {
@@ -30,6 +26,45 @@ impl Identifier {
             span: to_span(pair.as_span()),
         })
     }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct VarBlock {
+    pub declarations: Vec<VariableDeclaration>,
+    pub kind: VarBlockKind,
+    pub span: Span,
+}
+
+impl VarBlock {
+    fn from_pair(pair: Pair<'_, Rule>) -> Result<VarBlock, ParseError> {
+        let span = to_span(pair.as_span());
+
+        let kind = match pair.as_rule() {
+            Rule::var_block => VarBlockKind::Normal,
+            _ => {
+                return Err(ParseError::expected_one_of(
+                    &[Rule::var_block],
+                    pair.as_span(),
+                ))
+            },
+        };
+
+        let declarations = pair
+            .into_inner()
+            .map(VariableDeclaration::from_pair)
+            .collect::<Result<Vec<_>, _>>()?;
+
+        Ok(VarBlock {
+            declarations,
+            kind,
+            span,
+        })
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum VarBlockKind {
+    Normal,
 }
 
 /// A single variable declaration (e.g. `x: BOOL`).
@@ -256,18 +291,14 @@ impl IntegerLiteral {
             Rule::integer_hexadecimal => 16,
             Rule::integer_binary => 2,
             _ => {
-                return Err(PestError::new_from_span(
-                    PestErrorVariant::ParsingError {
-                        positives: vec![
-                            Rule::integer_decimal,
-                            Rule::integer_hexadecimal,
-                            Rule::integer_binary,
-                        ],
-                        negatives: vec![],
-                    },
+                return Err(ParseError::expected_one_of(
+                    &[
+                        Rule::integer_decimal,
+                        Rule::integer_hexadecimal,
+                        Rule::integer_binary,
+                    ],
                     pair.as_span(),
-                )
-                .into());
+                ));
             },
         };
 
@@ -318,17 +349,10 @@ impl BooleanLiteral {
             Rule::boolean_true => true,
             Rule::boolean_false => false,
             _ => {
-                return Err(PestError::new_from_span(
-                    PestErrorVariant::ParsingError {
-                        positives: vec![
-                            Rule::boolean_true,
-                            Rule::boolean_false,
-                        ],
-                        negatives: vec![],
-                    },
+                return Err(ParseError::expected_one_of(
+                    &[Rule::boolean_true, Rule::boolean_false],
                     span,
-                )
-                .into())
+                ));
             },
         };
 
@@ -367,6 +391,7 @@ impl_from_str! {
     BooleanLiteral => boolean,
     Statement => statement,
     Repeat => repeat,
+    VarBlock => any_var_block,
 }
 
 #[cfg(test)]
@@ -661,6 +686,61 @@ mod tests {
         }
 
         let got = Repeat::from_str(src).unwrap();
+
+        assert_eq!(got, expected);
+    }
+
+    #[test]
+    fn var_block_with_two_decls() {
+        let src = "VAR\nx : BOOL;\nfourty_two : INTEGER;\nEND_VAR";
+        let expected = VarBlock {
+            declarations: vec![
+                VariableDeclaration {
+                    name: Identifier {
+                        value: String::from("x"),
+                        span: Span::new(4, 5),
+                    },
+                    declared_type: Identifier {
+                        value: String::from("BOOL"),
+                        span: Span::new(8, 12),
+                    },
+                    span: Span::new(4, 12),
+                },
+                VariableDeclaration {
+                    name: Identifier {
+                        value: String::from("fourty_two"),
+                        span: Span::new(14, 24),
+                    },
+                    declared_type: Identifier {
+                        value: String::from("INTEGER"),
+                        span: Span::new(27, 34),
+                    },
+                    span: Span::new(14, 34),
+                },
+            ],
+            kind: VarBlockKind::Normal,
+            span: Span::new(0, 43),
+        };
+
+        parses_to! {
+            parser: RawParser,
+            input: src,
+            rule: Rule::var_block,
+            tokens: [
+                var_block(0, 43, [
+                    variable_decl(4, 12, [
+                        identifier(4, 5),
+                        identifier(8, 12),
+                    ]),
+                    variable_decl(14, 34, [
+                        identifier(14, 24),
+                        identifier(27, 34),
+                    ]),
+                ]),
+            ]
+        }
+
+        let got = VarBlock::from_str(src).unwrap();
 
         assert_eq!(got, expected);
     }

@@ -46,6 +46,21 @@ impl ParseError {
             })
         }
     }
+
+    pub(crate) fn expected_one_of(
+        rules: &[Rule],
+        span: pest::Span<'_>,
+    ) -> ParseError {
+        ParseError {
+            inner: PestError::new_from_span(
+                ErrorVariant::ParsingError {
+                    positives: rules.to_vec(),
+                    negatives: vec![],
+                },
+                span,
+            ),
+        }
+    }
 }
 
 // this is just an implementation detail to make `?` more useful
