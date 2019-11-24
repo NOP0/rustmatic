@@ -39,7 +39,7 @@ impl ParseError {
                 inner: PestError::new_from_span(
                     ErrorVariant::ParsingError {
                         positives: vec![rule],
-                        negatives: vec![pair.as_rule()],
+                        negatives: vec![],
                     },
                     pair.as_span(),
                 ),

@@ -10,6 +10,42 @@ fn to_span(pest_span: pest::Span<'_>) -> Span {
     Span::new(pest_span.start() as u32, pest_span.end() as u32)
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub struct Program {
+    pub name: Identifier,
+    pub var_blocks: Vec<VarBlock>,
+    pub body: Block,
+    pub span: Span,
+}
+
+impl Program {
+    fn from_pair(pair: Pair<'_, Rule>) -> Result<Program, ParseError> {
+        ParseError::expect_rule(Rule::program, &pair)?;
+
+        let span = to_span(pair.as_span());
+
+        let mut items = pair.into_inner();
+
+        let name = Identifier::from_pair(items.next().unwrap())?;
+
+        let var_blocks = items
+            .next()
+            .unwrap()
+            .into_inner()
+            .map(VarBlock::from_pair)
+            .collect::<Result<Vec<_>, _>>()?;
+
+        let body = Block::from_pair(items.next().unwrap())?;
+
+        Ok(Program {
+            name,
+            var_blocks,
+            body,
+            span,
+        })
+    }
+}
+
 /// An identifier, typically used when naming variables or functions.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Identifier {
@@ -119,16 +155,23 @@ impl VariableDeclaration {
 #[derive(Debug, Clone, PartialEq)]
 pub enum Expression {
     Variable(Identifier),
+    Literal(Literal),
     BinaryExpression(BinaryExpression),
 }
 
 impl Expression {
     fn from_pair(pair: Pair<'_, Rule>) -> Result<Expression, ParseError> {
         match pair.as_rule() {
+            Rule::infix => {
+                Expression::from_pair(pair.into_inner().next().unwrap())
+            },
             Rule::identifier => {
                 Ok(Expression::Variable(Identifier::from_pair(pair)?))
             },
-            _ => unimplemented!(),
+            Rule::boolean | Rule::float | Rule::integer | Rule::string => {
+                Ok(Expression::Literal(Literal::from_pair(pair)?))
+            },
+            other => unimplemented!("{:#?}", other),
         }
     }
 }
@@ -277,11 +320,33 @@ impl BinaryOp {
     }
 }
 
+#[derive(Debug, Clone, PartialEq)]
 pub enum Literal {
     Integer(IntegerLiteral),
     Float(FloatLiteral),
     String(StringLiteral),
     Boolean(BooleanLiteral),
+}
+
+impl Literal {
+    fn from_pair(pair: Pair<'_, Rule>) -> Result<Literal, ParseError> {
+        match pair.as_rule() {
+            Rule::boolean => {
+                Ok(Literal::Boolean(BooleanLiteral::from_pair(pair)?))
+            },
+            Rule::float => Ok(Literal::Float(FloatLiteral::from_pair(pair)?)),
+            Rule::integer => {
+                Ok(Literal::Integer(IntegerLiteral::from_pair(pair)?))
+            },
+            Rule::string => {
+                Ok(Literal::String(StringLiteral::from_pair(pair)?))
+            },
+            _ => Err(ParseError::expected_one_of(
+                &[Rule::boolean, Rule::float, Rule::integer, Rule::string],
+                pair.as_span(),
+            )),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -333,6 +398,17 @@ impl IntegerLiteral {
 pub struct StringLiteral {
     pub value: String,
     pub span: Span,
+}
+
+impl StringLiteral {
+    fn from_pair(pair: Pair<'_, Rule>) -> Result<StringLiteral, ParseError> {
+        ParseError::expect_rule(Rule::string, &pair)?;
+
+        Ok(StringLiteral {
+            value: pair.as_str().to_string(),
+            span: to_span(pair.as_span()),
+        })
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -413,6 +489,7 @@ impl_from_str! {
     Repeat => repeat,
     VarBlock => var_block,
     VarBlockKind => var_block_kind,
+    Program => program,
 }
 
 #[cfg(test)]
@@ -596,9 +673,7 @@ mod tests {
             parser: RawParser,
             input: src,
             rule: Rule::float,
-            tokens: [
-                float(0, 4, [float_characteristic(0, 1), float_mantissa(2, 4)]),
-            ]
+            tokens: [float(0, 4)]
         }
 
         let got = FloatLiteral::from_str(src).unwrap();
@@ -660,10 +735,12 @@ mod tests {
                         value: String::from("x"),
                         span: Span::new(8, 9),
                     },
-                    value: Arc::new(Expression::Variable(Identifier {
-                        value: String::from("FALSE"),
-                        span: Span::new(13, 18),
-                    })),
+                    value: Arc::new(Expression::Literal(Literal::Boolean(
+                        BooleanLiteral {
+                            value: false,
+                            span: Span::new(13, 18),
+                        },
+                    ))),
                     span: Span::new(8, 18),
                 })],
                 span: Span::new(8, 19),
@@ -673,10 +750,12 @@ mod tests {
                     value: String::from("x"),
                     span: Span::new(26, 27),
                 },
-                value: Arc::new(Expression::Variable(Identifier {
-                    value: String::from("FALSE"),
-                    span: Span::new(31, 36),
-                })),
+                value: Arc::new(Expression::Literal(Literal::Boolean(
+                    BooleanLiteral {
+                        value: false,
+                        span: Span::new(31, 36),
+                    },
+                ))),
                 span: Span::new(26, 36),
             },
             span: Span::new(0, 48),
@@ -693,14 +772,14 @@ mod tests {
                                 assignment(8, 18, [
                                     identifier(8, 9),
                                     assign(10, 12),
-                                    identifier(13, 18),
+                                    boolean(13, 18, [boolean_false(13, 18)]),
                                 ])
                             ])
                         ]),
                         assignment(26, 36, [
                             identifier(26, 27),
                             assign(28, 30),
-                            identifier(31, 36),
+                            boolean(31, 36, [boolean_false(31, 36)]),
                         ])
                 ]),
             ]
@@ -763,6 +842,89 @@ mod tests {
         }
 
         let got = VarBlock::from_str(src).unwrap();
+
+        assert_eq!(got, expected);
+    }
+
+    #[test]
+    fn parse_a_program() {
+        let src = r#"PROGRAM foo 
+            VAR_GLOBAL 
+                fourty_two: INTEGER; 
+            END_VAR 
+            
+            fourty_two := 42; 
+        END_PROGRAM
+        "#;
+        let expected = Program {
+            name: Identifier {
+                value: String::from("foo"),
+                span: Span::new(8, 11),
+            },
+            var_blocks: vec![VarBlock {
+                declarations: vec![VariableDeclaration {
+                    name: Identifier {
+                        value: String::from("fourty_two"),
+                        span: Span::new(53, 63),
+                    },
+                    declared_type: Identifier {
+                        value: String::from("INTEGER"),
+                        span: Span::new(65, 72),
+                    },
+                    span: Span::new(53, 72),
+                }],
+                kind: VarBlockKind::Global,
+                span: Span::new(25, 94),
+            }],
+            body: Block {
+                statements: vec![Statement::Assignment(Assignment {
+                    variable: Identifier {
+                        value: String::from("fourty_two"),
+                        span: Span::new(121, 131),
+                    },
+                    value: Arc::new(Expression::Literal(Literal::Integer(
+                        IntegerLiteral {
+                            value: 42,
+                            span: Span::new(135, 137),
+                        },
+                    ))),
+                    span: Span::new(121, 137),
+                })],
+                span: Span::new(121, 138),
+            },
+            span: Span::new(0, 168),
+        };
+
+        parses_to! {
+            parser: RawParser,
+            input: src,
+            rule: Rule::program,
+            tokens: [
+                program(0, 168, [
+                    identifier(8, 11),
+                    preamble(25, 94, [
+                        var_block(25, 94, [
+                            global_var_block(25, 35),
+                            variable_decl(53, 72, [
+                                identifier(53, 63),
+                                identifier(65, 72),
+                            ]),
+                        ]),
+                    ]),
+                    block(121, 138, [
+                        statement(121, 138, [
+                            assignment(121, 137, [
+                                identifier(121, 131),
+                                assign(132, 134),
+                                integer(135, 137, [integer_decimal(135, 137)]),
+                            ])
+                        ])
+                    ]),
+                ]),
+            ]
+        }
+
+        let got = Program::from_str(src).unwrap();
 
         assert_eq!(got, expected);
     }

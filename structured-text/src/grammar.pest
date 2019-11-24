@@ -23,7 +23,8 @@ var_block = {
 var_block_kind = _{ 
     global_var_block | external_var_block | input_var_block | output_var_block |
     normal_var_block 
-    }
+}
+
 normal_var_block = { ^"var" }
 global_var_block = { ^"var_global" }
 external_var_block = { ^"var_external" }
@@ -56,7 +57,7 @@ assignment = {
 
 expression                  = _{ infix | expression_inner }
 infix                       =  { expression_inner ~ (binary_operator ~ expression_inner)+ }
-expression_inner            = _{ if_expression | unary | identifier | braced_expression }
+expression_inner            = _{ if_expression | unary | literal | identifier | braced_expression }
 braced_expression           = _{ "(" ~ expression ~ ")" }
 unary                       =  { unary_operator ~ (literal | identifier | braced_expression) }
 
@@ -67,8 +68,8 @@ boolean_true                =  { ^"true" }
 boolean_false               =  { ^"false" }
 
 float                       = ${ float_characteristic ~ "." ~ float_mantissa }
-float_characteristic        =  { "0" | (('1'..'9') ~ ('0'..'9' | "_")*) }
-float_mantissa              =  { ('0'..'9')+ }
+float_characteristic        = _{ "0" | (('1'..'9') ~ ('0'..'9' | "_")*) }
+float_mantissa              = _{ ('0'..'9')+ }
 
 integer                     = ${ integer_hexadecimal_sigil | integer_binary_sigil | integer_decimal | integer_zero }
 integer_decimal             =  { '1'..'9' ~ ('0'..'9' | "_")* }
