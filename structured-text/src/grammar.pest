@@ -10,7 +10,11 @@ conditional = {
     ^"if"
 }
 
-identifier = {
+variable_decl = {
+    identifier ~ ":" ~ identifier
+}
+
+identifier = @{
     ASCII_ALPHA ~ (ASCII_ALPHANUMERIC | "_")*
 }
 

@@ -8,10 +8,10 @@ macro_rules! parse_data_file {
             fn $name() {
                 let src = include_str!(concat!("data/", stringify!($name), ".st"));
 
-                use rustmatic_structured_text::parser::{Parser, Rule};
+                use rustmatic_structured_text::parser::{RawParser, Rule};
                 use pest::Parser as _;
 
-                Parser::parse(Rule::$parses_to, src).unwrap();
+                RawParser::parse(Rule::$parses_to, src).unwrap();
             }
         )*
     };
