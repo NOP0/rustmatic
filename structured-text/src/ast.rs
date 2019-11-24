@@ -4,12 +4,13 @@ use crate::{
 };
 use codespan::Span;
 use pest::{iterators::Pair, Parser};
-use std::str::FromStr;
+use std::{str::FromStr, sync::Arc};
 
 fn to_span(pest_span: pest::Span<'_>) -> Span {
     Span::new(pest_span.start() as u32, pest_span.end() as u32)
 }
 
+/// An identifier, typically used when naming variables or functions.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Identifier {
     pub value: String,
@@ -27,6 +28,7 @@ impl Identifier {
     }
 }
 
+/// A single variable declaration (e.g. `x: BOOL`).
 #[derive(Debug, Clone, PartialEq)]
 pub struct VariableDeclaration {
     pub name: Identifier,
@@ -54,9 +56,11 @@ impl VariableDeclaration {
     }
 }
 
+/// An expression.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Expression {
     Variable(Identifier),
+    BinaryExpression(BinaryExpression),
 }
 
 impl Expression {
@@ -74,10 +78,11 @@ impl Expression {
     }
 }
 
+/// An assignment statement (e.g. `x := 42`).
 #[derive(Debug, Clone, PartialEq)]
 pub struct Assignment {
     pub variable: Identifier,
-    pub value: Expression,
+    pub value: Arc<Expression>,
     pub span: Span,
 }
 
@@ -93,9 +98,56 @@ impl Assignment {
 
         Ok(Assignment {
             variable,
-            value,
+            span,
+            value: Arc::new(value),
+        })
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct BinaryExpression {
+    pub left: Arc<Expression>,
+    pub right: Arc<Expression>,
+    pub op: BinaryOp,
+    pub span: Span,
+}
+
+impl BinaryExpression {
+    fn from_pair(pair: Pair<'_, Rule>) -> Result<BinaryExpression, ParseError> {
+        ParseError::expect_rule(Rule::binary_expression, &pair)?;
+
+        let span = to_span(pair.as_span());
+
+        let mut items = pair.into_inner();
+        let left = Expression::from_pair(items.next().unwrap())?;
+        let op = BinaryOp::from_pair(items.next().unwrap())?;
+        let right = Expression::from_pair(items.next().unwrap())?;
+
+        Ok(BinaryExpression {
+            left: Arc::new(left),
+            right: Arc::new(right),
+            op,
             span,
         })
+    }
+}
+
+#[derive(Debug, Copy, Clone, PartialEq, Hash, Eq)]
+pub enum BinaryOp {
+    Add,
+    Subtract,
+    Multiply,
+    Divide,
+}
+
+impl BinaryOp {
+    fn from_pair(pair: Pair<'_, Rule>) -> Result<BinaryOp, ParseError> {
+        ParseError::expect_rule(Rule::bin_op, &pair)?;
+
+        match pair.as_str() {
+            "+" => Ok(BinaryOp::Add),
+            _ => unimplemented!(),
+        }
     }
 }
 
@@ -120,6 +172,7 @@ impl_from_str! {
     Assignment => assignment,
     VariableDeclaration => variable_decl,
     Expression => expression,
+    BinaryExpression => binary_expression,
 }
 
 #[cfg(test)]
@@ -188,10 +241,10 @@ mod tests {
                 value: String::from("x"),
                 span: Span::new(0, 1),
             },
-            value: Expression::Variable(Identifier {
+            value: Arc::new(Expression::Variable(Identifier {
                 value: String::from("y"),
                 span: Span::new(5, 6),
-            }),
+            })),
             span: Span::new(0, 6),
         };
 
@@ -210,6 +263,40 @@ mod tests {
         }
 
         let got = Assignment::from_str(src).unwrap();
+
+        assert_eq!(got, expected);
+    }
+
+    #[test]
+    fn a_plus_b() {
+        let src = "a + b";
+        let expected = BinaryExpression {
+            left: Arc::new(Expression::Variable(Identifier {
+                value: String::from("a"),
+                span: Span::new(0, 1),
+            })),
+            right: Arc::new(Expression::Variable(Identifier {
+                value: String::from("b"),
+                span: Span::new(4, 5),
+            })),
+            op: BinaryOp::Add,
+            span: Span::new(0, 5),
+        };
+
+        parses_to! {
+            parser: RawParser,
+            input: src,
+            rule: Rule::binary_expression,
+            tokens: [
+                binary_expression(0, 5, [
+                    expression(0, 1, [ identifier(0, 1) ]),
+                    bin_op(2, 3),
+                    expression(4, 5, [ identifier(4, 5) ]),
+                ])
+            ]
+        }
+
+        let got = BinaryExpression::from_str(src).unwrap();
 
         assert_eq!(got, expected);
     }

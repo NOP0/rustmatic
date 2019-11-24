@@ -37,6 +37,10 @@ assignment = {
 
 expression = { identifier }
 
+binary_expression = { expression ~ bin_op ~ expression }
+
+bin_op = { "+" }
+
 conditional = {
     ^"if"
 }

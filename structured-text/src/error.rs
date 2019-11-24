@@ -8,6 +8,7 @@ use std::{
     fmt::{self, Display, Formatter},
 };
 
+/// The type of error that may occur while parsing.
 #[derive(Debug, Clone, PartialEq)]
 pub struct ParseError {
     inner: PestError<Rule>,
