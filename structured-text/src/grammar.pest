@@ -1,0 +1,9 @@
+field = { (ASCII_DIGIT | "." | "-")+ }
+record = { field ~ ("," ~ field)* }
+file = { SOI ~ (record ~ ("\r\n" | "\n"))* ~ EOI }
+
+WHITESPACE = _{ " " | "\t" | "\n" }
+COMMENT = _{ 
+    ( "(*" ~ (!"*)" ~ ANY)* ~ "*)" )  | 
+    ( "//" ~ (!"\n" ~ ANY)* )
+}
