@@ -1,17 +1,44 @@
+file = {
+    SOI ~ (program | function_block)* ~ EOI
+}
 
 program = {
-    ^"program" ~ ^"end_program" ~ ";"?
+    ^"program" ~ identifier ~ var_block ? ~ 
+    statement* ~
+    ^"end_program" ~ ";"?
 }
+
 function_block = {
     ^"function_block" ~ ^"end_function_block" ~ ";"?
 }
 
-conditional = {
-    ^"if"
+var_block = {
+    ^"var" ~ (variable_decl ~ ";")* ~ ^"end_var"
 }
 
 variable_decl = {
     identifier ~ ":" ~ identifier
+}
+
+statement = {
+    (assignment| repeat) ~ ";"
+}
+
+repeat = {
+    ^"repeat" ~ 
+        (!^"until" ~ statement)* ~ 
+    ^"until" ~ assignment ~ ";" 
+    ~ ^"end_repeat"
+}
+
+assignment = {
+    identifier ~ ":=" ~ expression
+}
+
+expression = { identifier }
+
+conditional = {
+    ^"if"
 }
 
 identifier = @{

@@ -18,23 +18,12 @@ pub struct Identifier {
 
 impl Identifier {
     fn from_pair(pair: Pair<'_, Rule>) -> Result<Identifier, ParseError> {
-        if pair.as_rule() != Rule::identifier {
-            unimplemented!()
-        }
+        ParseError::expect_rule(Rule::identifier, &pair)?;
+
         Ok(Identifier {
             value: pair.as_str().to_string(),
             span: to_span(pair.as_span()),
         })
-    }
-}
-
-impl FromStr for Identifier {
-    type Err = ParseError;
-
-    fn from_str(src: &str) -> Result<Identifier, ParseError> {
-        let mut pairs = RawParser::parse(Rule::identifier, src)?;
-
-        Identifier::from_pair(pairs.next().unwrap())
     }
 }
 
@@ -49,9 +38,7 @@ impl VariableDeclaration {
     fn from_pair(
         pair: Pair<'_, Rule>,
     ) -> Result<VariableDeclaration, ParseError> {
-        if pair.as_rule() != Rule::variable_decl {
-            unimplemented!()
-        }
+        ParseError::expect_rule(Rule::variable_decl, &pair)?;
 
         let span = to_span(pair.as_span());
 
@@ -67,14 +54,72 @@ impl VariableDeclaration {
     }
 }
 
-impl FromStr for VariableDeclaration {
-    type Err = ParseError;
+#[derive(Debug, Clone, PartialEq)]
+pub enum Expression {
+    Variable(Identifier),
+}
 
-    fn from_str(src: &str) -> Result<VariableDeclaration, ParseError> {
-        let mut pairs = RawParser::parse(Rule::variable_decl, src)?;
+impl Expression {
+    fn from_pair(pair: Pair<'_, Rule>) -> Result<Expression, ParseError> {
+        ParseError::expect_rule(Rule::expression, &pair)?;
 
-        VariableDeclaration::from_pair(pairs.next().unwrap())
+        let inner = pair.into_inner().next().unwrap();
+
+        match inner.as_rule() {
+            Rule::identifier => {
+                Ok(Expression::Variable(Identifier::from_pair(inner)?))
+            },
+            _ => unimplemented!(),
+        }
     }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Assignment {
+    pub variable: Identifier,
+    pub value: Expression,
+    pub span: Span,
+}
+
+impl Assignment {
+    fn from_pair(pair: Pair<'_, Rule>) -> Result<Assignment, ParseError> {
+        ParseError::expect_rule(Rule::assignment, &pair)?;
+
+        let span = to_span(pair.as_span());
+
+        let mut items = pair.into_inner();
+        let variable = Identifier::from_pair(items.next().unwrap())?;
+        let value = Expression::from_pair(items.next().unwrap())?;
+
+        Ok(Assignment {
+            variable,
+            value,
+            span,
+        })
+    }
+}
+
+macro_rules! impl_from_str {
+    ($( $name:ty => $rule:ident, )*) => {
+        $(
+            impl FromStr for $name {
+                type Err = ParseError;
+
+                fn from_str(src: &str) -> Result<$name, ParseError> {
+                    let mut pairs = RawParser::parse(Rule::$rule, src)?;
+
+                    <$name>::from_pair(pairs.next().unwrap())
+                }
+            }
+        )*
+    };
+}
+
+impl_from_str! {
+    Identifier => identifier,
+    Assignment => assignment,
+    VariableDeclaration => variable_decl,
+    Expression => expression,
 }
 
 #[cfg(test)]
@@ -82,12 +127,21 @@ mod tests {
     use super::*;
 
     #[test]
-    fn parse_simple_identifier() {
-        let src = "x";
+    fn parse_identifier() {
+        let src = "x_32";
         let expected = Identifier {
-            value: String::from("x"),
-            span: Span::new(0, 1),
+            value: String::from("x_32"),
+            span: Span::new(0, 4),
         };
+
+        parses_to! {
+            parser: RawParser,
+            input: src,
+            rule: Rule::identifier,
+            tokens: [
+                    identifier(0, 4)
+            ]
+        }
 
         let got = Identifier::from_str(src).unwrap();
 
@@ -122,6 +176,40 @@ mod tests {
         }
 
         let got = VariableDeclaration::from_str(src).unwrap();
+
+        assert_eq!(got, expected);
+    }
+
+    #[test]
+    fn simple_assignment() {
+        let src = "x := y";
+        let expected = Assignment {
+            variable: Identifier {
+                value: String::from("x"),
+                span: Span::new(0, 1),
+            },
+            value: Expression::Variable(Identifier {
+                value: String::from("y"),
+                span: Span::new(5, 6),
+            }),
+            span: Span::new(0, 6),
+        };
+
+        parses_to! {
+            parser: RawParser,
+            input: src,
+            rule: Rule::assignment,
+            tokens: [
+                assignment(0, 6, [
+                    identifier(0, 1),
+                    expression(5, 6, [
+                        identifier(5, 6),
+                    ])
+                ])
+            ]
+        }
+
+        let got = Assignment::from_str(src).unwrap();
 
         assert_eq!(got, expected);
     }

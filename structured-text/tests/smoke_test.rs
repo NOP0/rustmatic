@@ -11,7 +11,9 @@ macro_rules! parse_data_file {
                 use rustmatic_structured_text::parser::{RawParser, Rule};
                 use pest::Parser as _;
 
-                RawParser::parse(Rule::$parses_to, src).unwrap();
+                if let Err(e) = RawParser::parse(Rule::$parses_to, src) {
+                    panic!("Parse failed: {0}\n\n{0:#?}", e);
+                }
             }
         )*
     };
@@ -19,11 +21,12 @@ macro_rules! parse_data_file {
 
 parse_data_file! {
     #[ignore]
-    first_wikipedia_sample => program,
+    first_wikipedia_sample => file,
     #[ignore]
     function_block => function_block,
     #[ignore]
     if_start_while_initialized_prime_system => conditional,
     #[ignore]
     if_chain => conditional,
+    simple_program => program,
 }
