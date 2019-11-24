@@ -69,6 +69,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "rustmatic-structured-text"
+version = "0.1.0"
+
+[[package]]
 name = "slotmap"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"

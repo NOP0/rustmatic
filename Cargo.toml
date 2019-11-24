@@ -10,4 +10,4 @@ publish = false
 slotmap = "0.4.0"
 
 [workspace]
-members = ["core", "runtime", "gpio"]
+members = ["core", "runtime", "gpio", "structured-text"]
