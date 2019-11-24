@@ -5,6 +5,7 @@ authors = ["NOP0 <33583294+NOP0@users.noreply.github.com>", "Michael-F-Bryan <mi
 edition = "2018"
 description = "The entrypoint into the rustmatic runtime"
 publish = false
+license = "MIT OR Apache-2.0"
 
 [dependencies]
 slotmap = "0.4.0"
