@@ -11,6 +11,11 @@ description = "A parser for the Structured Text IEC 61131-3 language."
 codespan = "0.5.0"
 pest = "2.1.2"
 pest_derive = "2.1.0"
+serde = { version = "1.0", optional = true }
+serde_derive = { version = "1.0", optional = true }
 
 [dev-dependencies]
 pretty_assertions = "0.6.1"
+
+[features]
+serde-1 = ["serde", "codespan/serialization"]

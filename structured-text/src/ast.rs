@@ -4,7 +4,7 @@ use crate::{
 };
 use codespan::Span;
 use pest::{iterators::Pair, Parser};
-use std::{str::FromStr, sync::Arc};
+use std::str::FromStr;
 
 fn to_span(pest_span: pest::Span<'_>) -> Span {
     Span::new(pest_span.start() as u32, pest_span.end() as u32)
@@ -16,6 +16,11 @@ fn preamble(pair: Pair<'_, Rule>) -> Result<Vec<VarBlock>, ParseError> {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(
+    feature = "serde-1",
+    derive(serde_derive::Serialize, serde_derive::Deserialize),
+    serde(rename_all = "kebab-case")
+)]
 pub struct FunctionBlock {
     pub name: Identifier,
     pub var_blocks: Vec<VarBlock>,
@@ -44,6 +49,11 @@ impl FunctionBlock {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(
+    feature = "serde-1",
+    derive(serde_derive::Serialize, serde_derive::Deserialize),
+    serde(rename_all = "kebab-case")
+)]
 pub struct Program {
     pub name: Identifier,
     pub var_blocks: Vec<VarBlock>,
@@ -73,6 +83,11 @@ impl Program {
 
 /// An identifier, typically used when naming variables or functions.
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(
+    feature = "serde-1",
+    derive(serde_derive::Serialize, serde_derive::Deserialize),
+    serde(rename_all = "kebab-case")
+)]
 pub struct Identifier {
     pub value: String,
     pub span: Span,
@@ -101,6 +116,11 @@ impl Identifier {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(
+    feature = "serde-1",
+    derive(serde_derive::Serialize, serde_derive::Deserialize),
+    serde(rename_all = "kebab-case")
+)]
 pub struct VarBlock {
     pub declarations: Vec<VariableDeclaration>,
     pub kind: VarBlockKind,
@@ -129,6 +149,11 @@ impl VarBlock {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(
+    feature = "serde-1",
+    derive(serde_derive::Serialize, serde_derive::Deserialize),
+    serde(rename_all = "kebab-case")
+)]
 pub enum VarBlockKind {
     Normal,
     Global,
@@ -161,6 +186,11 @@ impl VarBlockKind {
 
 /// A single variable declaration (e.g. `x: BOOL`).
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(
+    feature = "serde-1",
+    derive(serde_derive::Serialize, serde_derive::Deserialize),
+    serde(rename_all = "kebab-case")
+)]
 pub struct VariableDeclaration {
     pub name: Identifier,
     pub declared_type: Identifier,
@@ -197,6 +227,11 @@ impl VariableDeclaration {
 
 /// An expression.
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(
+    feature = "serde-1",
+    derive(serde_derive::Serialize, serde_derive::Deserialize),
+    serde(rename_all = "kebab-case")
+)]
 pub enum Expression {
     Variable(Identifier),
     Literal(Literal),
@@ -221,6 +256,11 @@ impl Expression {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(
+    feature = "serde-1",
+    derive(serde_derive::Serialize, serde_derive::Deserialize),
+    serde(rename_all = "kebab-case")
+)]
 pub struct Repeat {
     pub block: Block,
     pub condition: Assignment,
@@ -246,6 +286,11 @@ impl Repeat {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(
+    feature = "serde-1",
+    derive(serde_derive::Serialize, serde_derive::Deserialize),
+    serde(rename_all = "kebab-case")
+)]
 pub struct Block {
     pub statements: Vec<Statement>,
     pub span: Span,
@@ -266,6 +311,11 @@ impl Block {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(
+    feature = "serde-1",
+    derive(serde_derive::Serialize, serde_derive::Deserialize),
+    serde(rename_all = "kebab-case")
+)]
 pub enum Statement {
     Assignment(Assignment),
 }
@@ -288,9 +338,14 @@ impl Statement {
 
 /// An assignment statement (e.g. `x := 42`).
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(
+    feature = "serde-1",
+    derive(serde_derive::Serialize, serde_derive::Deserialize),
+    serde(rename_all = "kebab-case")
+)]
 pub struct Assignment {
     pub variable: Identifier,
-    pub value: Arc<Expression>,
+    pub value: Expression,
     pub span: Span,
 }
 
@@ -308,15 +363,20 @@ impl Assignment {
         Ok(Assignment {
             variable,
             span,
-            value: Arc::new(value),
+            value,
         })
     }
 }
 
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(
+    feature = "serde-1",
+    derive(serde_derive::Serialize, serde_derive::Deserialize),
+    serde(rename_all = "kebab-case")
+)]
 pub struct BinaryExpression {
-    pub left: Arc<Expression>,
-    pub right: Arc<Expression>,
+    pub left: Box<Expression>,
+    pub right: Box<Expression>,
     pub op: BinaryOp,
     pub span: Span,
 }
@@ -328,13 +388,13 @@ impl BinaryExpression {
         let span = to_span(pair.as_span());
 
         let mut items = pair.into_inner();
-        let left = Expression::from_pair(items.next().unwrap())?;
+        let left = Box::new(Expression::from_pair(items.next().unwrap())?);
         let op = BinaryOp::from_pair(items.next().unwrap())?;
-        let right = Expression::from_pair(items.next().unwrap())?;
+        let right = Box::new(Expression::from_pair(items.next().unwrap())?);
 
         Ok(BinaryExpression {
-            left: Arc::new(left),
-            right: Arc::new(right),
+            left,
+            right,
             op,
             span,
         })
@@ -342,6 +402,11 @@ impl BinaryExpression {
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Hash, Eq)]
+#[cfg_attr(
+    feature = "serde-1",
+    derive(serde_derive::Serialize, serde_derive::Deserialize),
+    serde(rename_all = "kebab-case")
+)]
 pub enum BinaryOp {
     Equals,
     Add,
@@ -367,6 +432,11 @@ impl BinaryOp {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(
+    feature = "serde-1",
+    derive(serde_derive::Serialize, serde_derive::Deserialize),
+    serde(rename_all = "kebab-case")
+)]
 pub enum Literal {
     Integer(IntegerLiteral),
     Float(FloatLiteral),
@@ -396,6 +466,11 @@ impl Literal {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(
+    feature = "serde-1",
+    derive(serde_derive::Serialize, serde_derive::Deserialize),
+    serde(rename_all = "kebab-case")
+)]
 pub struct IntegerLiteral {
     pub value: u64,
     pub span: Span,
@@ -441,6 +516,11 @@ impl IntegerLiteral {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(
+    feature = "serde-1",
+    derive(serde_derive::Serialize, serde_derive::Deserialize),
+    serde(rename_all = "kebab-case")
+)]
 pub struct StringLiteral {
     pub value: String,
     pub span: Span,
@@ -458,6 +538,11 @@ impl StringLiteral {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(
+    feature = "serde-1",
+    derive(serde_derive::Serialize, serde_derive::Deserialize),
+    serde(rename_all = "kebab-case")
+)]
 pub struct FloatLiteral {
     pub value: f64,
     pub span: Span,
@@ -475,6 +560,11 @@ impl FloatLiteral {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(
+    feature = "serde-1",
+    derive(serde_derive::Serialize, serde_derive::Deserialize),
+    serde(rename_all = "kebab-case")
+)]
 pub struct BooleanLiteral {
     pub value: bool,
     pub span: Span,
@@ -506,8 +596,13 @@ impl BooleanLiteral {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(
+    feature = "serde-1",
+    derive(serde_derive::Serialize, serde_derive::Deserialize),
+    serde(rename_all = "kebab-case")
+)]
 pub struct ConditionalBranch {
-    pub condition: Arc<Expression>,
+    pub condition: Expression,
     pub block: Block,
 }
 
@@ -520,14 +615,16 @@ impl ConditionalBranch {
         let condition = Expression::from_pair(items.next().unwrap())?;
         let block = Block::from_pair(items.next().unwrap())?;
 
-        Ok(ConditionalBranch {
-            condition: Arc::new(condition),
-            block,
-        })
+        Ok(ConditionalBranch { condition, block })
     }
 }
 
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(
+    feature = "serde-1",
+    derive(serde_derive::Serialize, serde_derive::Deserialize),
+    serde(rename_all = "kebab-case")
+)]
 pub struct Conditional {
     pub true_branch: ConditionalBranch,
     pub else_if_branches: Vec<ConditionalBranch>,
@@ -716,10 +813,10 @@ mod tests {
                 value: String::from("x"),
                 span: Span::new(0, 1),
             },
-            value: Arc::new(Expression::Variable(Identifier {
+            value: Expression::Variable(Identifier {
                 value: String::from("y"),
                 span: Span::new(5, 6),
-            })),
+            }),
             span: Span::new(0, 6),
         };
 
@@ -745,11 +842,11 @@ mod tests {
     fn a_plus_b() {
         let src = "a + b";
         let expected = BinaryExpression {
-            left: Arc::new(Expression::Variable(Identifier {
+            left: Box::new(Expression::Variable(Identifier {
                 value: String::from("a"),
                 span: Span::new(0, 1),
             })),
-            right: Arc::new(Expression::Variable(Identifier {
+            right: Box::new(Expression::Variable(Identifier {
                 value: String::from("b"),
                 span: Span::new(4, 5),
             })),
@@ -890,24 +987,22 @@ mod tests {
             block: Block {
                 statements: vec![Statement::Assignment(Assignment {
                     variable: Identifier::new("x", 8, 9),
-                    value: Arc::new(Expression::Literal(Literal::Boolean(
+                    value: Expression::Literal(Literal::Boolean(
                         BooleanLiteral {
                             value: false,
                             span: Span::new(13, 18),
                         },
-                    ))),
+                    )),
                     span: Span::new(8, 18),
                 })],
                 span: Span::new(8, 19),
             },
             condition: Assignment {
                 variable: Identifier::new("x", 26, 27),
-                value: Arc::new(Expression::Literal(Literal::Boolean(
-                    BooleanLiteral {
-                        value: false,
-                        span: Span::new(31, 36),
-                    },
-                ))),
+                value: Expression::Literal(Literal::Boolean(BooleanLiteral {
+                    value: false,
+                    span: Span::new(31, 36),
+                })),
                 span: Span::new(26, 36),
             },
             span: Span::new(0, 48),
@@ -1013,12 +1108,12 @@ mod tests {
             body: Block {
                 statements: vec![Statement::Assignment(Assignment {
                     variable: Identifier::new("fourty_two", 121, 131),
-                    value: Arc::new(Expression::Literal(Literal::Integer(
+                    value: Expression::Literal(Literal::Integer(
                         IntegerLiteral {
                             value: 42,
                             span: Span::new(135, 137),
                         },
-                    ))),
+                    )),
                     span: Span::new(121, 137),
                 })],
                 span: Span::new(121, 138),
@@ -1140,20 +1235,20 @@ mod tests {
                 statements: vec![
                     Statement::Assignment(Assignment {
                         variable: Identifier::new("Current_Count", 851, 864),
-                        value: Arc::new(Expression::Variable(Identifier::new(
+                        value: Expression::Variable(Identifier::new(
                             "CycleCounter",
                             868,
                             880,
-                        ))),
+                        )),
                         span: Span::new(851, 880),
                     }),
                     Statement::Assignment(Assignment {
                         variable: Identifier::new("Count_Complete", 894, 908),
-                        value: Arc::new(Expression::Variable(Identifier::new(
+                        value: Expression::Variable(Identifier::new(
                             "CycleCounter",
                             912,
                             924,
-                        ))),
+                        )),
                         span: Span::new(894, 924),
                     }),
                 ],
@@ -1235,30 +1330,26 @@ mod tests {
         let src = "if x = true THEN\nx := false;\nend_if";
         let expected = Conditional {
             true_branch: ConditionalBranch {
-                condition: Arc::new(Expression::BinaryExpression(
-                    BinaryExpression {
-                        left: Arc::new(Expression::Variable(Identifier::new(
-                            "x", 3, 4,
-                        ))),
-                        right: Arc::new(Expression::Literal(Literal::Boolean(
-                            BooleanLiteral {
-                                value: true,
-                                span: Span::new(7, 11),
-                            },
-                        ))),
-                        op: BinaryOp::Equals,
-                        span: Span::new(3, 12),
-                    },
-                )),
+                condition: Expression::BinaryExpression(BinaryExpression {
+                    left: Box::new(Expression::Variable(Identifier::new("x", 3, 4))),
+                    right: Box::new(Expression::Literal(Literal::Boolean(
+                        BooleanLiteral {
+                            value: true,
+                            span: Span::new(7, 11),
+                        },
+                    ))),
+                    op: BinaryOp::Equals,
+                    span: Span::new(3, 12),
+                }),
                 block: Block {
                     statements: vec![Statement::Assignment(Assignment {
                         variable: Identifier::new("x", 17, 18),
-                        value: Arc::new(Expression::Literal(Literal::Boolean(
+                        value: Expression::Literal(Literal::Boolean(
                             BooleanLiteral {
                                 value: false,
                                 span: Span::new(22, 27),
                             },
-                        ))),
+                        )),
                         span: Span::new(17, 27),
                     })],
                     span: Span::new(17, 28),
