@@ -1,4 +1,3 @@
-// https://owlcation.com/stem/Introduction-to-Structured-Text-With-Codesys-35#mod_46205970
 IF S1 = 0 THEN
     S1:= S1+1;
 ELSIF S1 = 1 THEN
@@ -8,3 +7,5 @@ ELSIF S1 = 2 THEN
 ELSE
     S1:=4;
 END_IF
+
+// https://owlcation.com/stem/Introduction-to-Structured-Text-With-Codesys-35#mod_46205970

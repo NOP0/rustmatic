@@ -28,7 +28,7 @@ repeat_body                 = _{ block ~ ^"until" ~ assignment ~ ";" }
 
 expression                  = _{ infix | expression_inner }
 infix                       =  { expression_inner ~ (binary_operator ~ expression_inner)+ }
-expression_inner            = _{ if_expression | unary | literal | identifier | braced_expression }
+expression_inner            = _{ unary | literal | identifier | braced_expression }
 braced_expression           = _{ "(" ~ expression ~ ")" }
 unary                       =  { unary_operator ~ (literal | identifier | braced_expression) }
 
@@ -107,8 +107,24 @@ keyword = {
     ^"with" 
 }
 
-if_expression = {
-    ^"if"
+conditional = {
+    if_branch ~ elsif_branch* ~ else_branch? ~ ^"end_if"
+}
+
+if_branch = {
+    ^"if" ~ condition_then_block
+}
+
+elsif_branch = {
+    ^"elsif" ~ condition_then_block
+}
+
+else_branch = {
+    ^"else" ~ block
+}
+
+condition_then_block = _{
+    expression ~ ^"then" ~ block
 }
 
 identifier = @{

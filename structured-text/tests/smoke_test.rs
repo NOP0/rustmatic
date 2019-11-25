@@ -25,8 +25,7 @@ parse_data_file! {
     #[ignore]
     function_block => function_block,
     #[ignore]
-    if_start_while_initialized_prime_system => if_expression,
-    #[ignore]
-    if_chain => if_expression,
+    if_start_while_initialized_prime_system => conditional,
+    if_chain => conditional,
     simple_program => program,
 }

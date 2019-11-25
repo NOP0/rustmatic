@@ -206,9 +206,9 @@ pub enum Expression {
 impl Expression {
     fn from_pair(pair: Pair<'_, Rule>) -> Result<Expression, ParseError> {
         match pair.as_rule() {
-            Rule::infix => {
-                Expression::from_pair(pair.into_inner().next().unwrap())
-            },
+            Rule::infix => Ok(Expression::BinaryExpression(
+                BinaryExpression::from_pair(pair)?,
+            )),
             Rule::identifier => {
                 Ok(Expression::Variable(Identifier::from_pair(pair)?))
             },
@@ -343,6 +343,7 @@ impl BinaryExpression {
 
 #[derive(Debug, Copy, Clone, PartialEq, Hash, Eq)]
 pub enum BinaryOp {
+    Equals,
     Add,
     Subtract,
     Multiply,
@@ -356,6 +357,7 @@ impl BinaryOp {
             Rule::minus => Ok(BinaryOp::Subtract),
             Rule::multiply => Ok(BinaryOp::Multiply),
             Rule::divide => Ok(BinaryOp::Divide),
+            Rule::equal => Ok(BinaryOp::Equals),
             _ => Err(ParseError::custom(
                 "Unknown binary operator",
                 pair.as_span(),
@@ -503,6 +505,75 @@ impl BooleanLiteral {
     }
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub struct ConditionalBranch {
+    pub condition: Arc<Expression>,
+    pub block: Block,
+}
+
+impl ConditionalBranch {
+    fn from_pair(
+        pair: Pair<'_, Rule>,
+    ) -> Result<ConditionalBranch, ParseError> {
+        let mut items = pair.into_inner();
+
+        let condition = Expression::from_pair(items.next().unwrap())?;
+        let block = Block::from_pair(items.next().unwrap())?;
+
+        Ok(ConditionalBranch {
+            condition: Arc::new(condition),
+            block,
+        })
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Conditional {
+    pub true_branch: ConditionalBranch,
+    pub else_if_branches: Vec<ConditionalBranch>,
+    pub else_branch: Option<Block>,
+    pub span: Span,
+}
+
+impl Conditional {
+    fn from_pair(pair: Pair<'_, Rule>) -> Result<Conditional, ParseError> {
+        ParseError::expect_rule(Rule::conditional, &pair)?;
+
+        let span = to_span(pair.as_span());
+
+        let mut items = pair.into_inner();
+        let true_branch = ConditionalBranch::from_pair(items.next().unwrap())?;
+
+        let mut else_if_branches = Vec::new();
+        let mut else_branch = None;
+
+        while let Some(branch) = items.next() {
+            match branch.as_rule() {
+                Rule::elsif_branch => {
+                    else_if_branches.push(ConditionalBranch::from_pair(branch)?)
+                },
+                Rule::else_branch => {
+                    else_branch = Some(Block::from_pair(branch)?);
+                    break;
+                },
+                _ => {
+                    return Err(ParseError::expected_one_of(
+                        &[Rule::elsif_branch, Rule::else_branch],
+                        branch.as_span(),
+                    ))
+                },
+            }
+        }
+
+        Ok(Conditional {
+            true_branch,
+            else_if_branches,
+            else_branch,
+            span,
+        })
+    }
+}
+
 macro_rules! impl_from_str {
     ($( $name:ty => $rule:ident, )*) => {
         $(
@@ -535,6 +606,7 @@ impl_from_str! {
     VarBlockKind => var_block_kind,
     Program => program,
     FunctionBlock => function_block,
+    Conditional => conditional,
 }
 
 #[cfg(test)]
@@ -1156,6 +1228,81 @@ mod tests {
         assert_eq!(got, expected);
 
         // ... my god that was a pain to type out
+    }
+
+    #[test]
+    fn solitary_if() {
+        let src = "if x = true THEN\nx := false;\nend_if";
+        let expected = Conditional {
+            true_branch: ConditionalBranch {
+                condition: Arc::new(Expression::BinaryExpression(
+                    BinaryExpression {
+                        left: Arc::new(Expression::Variable(Identifier::new(
+                            "x", 3, 4,
+                        ))),
+                        right: Arc::new(Expression::Literal(Literal::Boolean(
+                            BooleanLiteral {
+                                value: true,
+                                span: Span::new(7, 11),
+                            },
+                        ))),
+                        op: BinaryOp::Equals,
+                        span: Span::new(3, 12),
+                    },
+                )),
+                block: Block {
+                    statements: vec![Statement::Assignment(Assignment {
+                        variable: Identifier::new("x", 17, 18),
+                        value: Arc::new(Expression::Literal(Literal::Boolean(
+                            BooleanLiteral {
+                                value: false,
+                                span: Span::new(22, 27),
+                            },
+                        ))),
+                        span: Span::new(17, 27),
+                    })],
+                    span: Span::new(17, 28),
+                },
+            },
+            else_if_branches: vec![],
+            else_branch: None,
+            span: Span::new(0, 35),
+        };
+
+        parses_to! {
+            parser: RawParser,
+            input: src,
+            rule: Rule::conditional,
+            tokens: [
+                conditional(0, 35, [
+                  if_branch(0, 28, [
+                    infix(3, 12, [
+                      identifier(3, 4),
+                      equal(5, 6),
+                      boolean(7, 11, [
+                        boolean_true(7, 11),
+                      ]),
+                    ]),
+                    block(17, 28, [
+                      statement(17, 28, [
+                        assignment(17, 27, [
+                          identifier(17, 18),
+                          assign(19, 21),
+                          boolean(22, 27, [
+                            boolean_false(22, 27),
+                          ]),
+                        ]),
+                      ]),
+                    ]),
+                  ]),
+                ]),
+            ]
+        }
+
+        let got = Conditional::from_str(src).unwrap();
+        println!("{:#?}", got);
+
+        assert_eq!(got, expected);
     }
 
     /// A way to cheat [`parses_to!()`] when you want to see what a parse tree
