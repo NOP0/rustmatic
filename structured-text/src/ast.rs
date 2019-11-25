@@ -16,6 +16,34 @@ fn preamble(pair: Pair<'_, Rule>) -> Result<Vec<VarBlock>, ParseError> {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+pub struct FunctionBlock {
+    pub name: Identifier,
+    pub var_blocks: Vec<VarBlock>,
+    pub body: Block,
+    pub span: Span,
+}
+
+impl FunctionBlock {
+    fn from_pair(pair: Pair<'_, Rule>) -> Result<FunctionBlock, ParseError> {
+        ParseError::expect_rule(Rule::function_block, &pair)?;
+
+        let span = to_span(pair.as_span());
+
+        let mut items = pair.into_inner();
+        let name = Identifier::from_pair(items.next().unwrap())?;
+        let var_blocks = preamble(items.next().unwrap())?;
+        let body = Block::from_pair(items.next().unwrap())?;
+
+        Ok(FunctionBlock {
+            name,
+            var_blocks,
+            body,
+            span,
+        })
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub struct Program {
     pub name: Identifier,
     pub var_blocks: Vec<VarBlock>,
@@ -51,6 +79,17 @@ pub struct Identifier {
 }
 
 impl Identifier {
+    pub fn new<S, I>(value: S, start: I, end: I) -> Self
+    where
+        S: Into<String>,
+        I: Into<codespan::ByteIndex>,
+    {
+        Identifier {
+            value: value.into(),
+            span: Span::new(start, end),
+        }
+    }
+
     fn from_pair(pair: Pair<'_, Rule>) -> Result<Identifier, ParseError> {
         ParseError::expect_rule(Rule::identifier, &pair)?;
 
@@ -495,6 +534,7 @@ impl_from_str! {
     VarBlock => var_block,
     VarBlockKind => var_block_kind,
     Program => program,
+    FunctionBlock => function_block,
 }
 
 #[cfg(test)]
@@ -777,10 +817,7 @@ mod tests {
         let expected = Repeat {
             block: Block {
                 statements: vec![Statement::Assignment(Assignment {
-                    variable: Identifier {
-                        value: String::from("x"),
-                        span: Span::new(8, 9),
-                    },
+                    variable: Identifier::new("x", 8, 9),
                     value: Arc::new(Expression::Literal(Literal::Boolean(
                         BooleanLiteral {
                             value: false,
@@ -792,10 +829,7 @@ mod tests {
                 span: Span::new(8, 19),
             },
             condition: Assignment {
-                variable: Identifier {
-                    value: String::from("x"),
-                    span: Span::new(26, 27),
-                },
+                variable: Identifier::new("x", 26, 27),
                 value: Arc::new(Expression::Literal(Literal::Boolean(
                     BooleanLiteral {
                         value: false,
@@ -842,26 +876,14 @@ mod tests {
         let expected = VarBlock {
             declarations: vec![
                 VariableDeclaration {
-                    name: Identifier {
-                        value: String::from("x"),
-                        span: Span::new(4, 5),
-                    },
-                    declared_type: Identifier {
-                        value: String::from("BOOL"),
-                        span: Span::new(8, 12),
-                    },
+                    name: Identifier::new("x", 4, 5),
+                    declared_type: Identifier::new("BOOL", 8, 12),
                     initial_value: None,
                     span: Span::new(4, 12),
                 },
                 VariableDeclaration {
-                    name: Identifier {
-                        value: String::from("fourty_two"),
-                        span: Span::new(14, 24),
-                    },
-                    declared_type: Identifier {
-                        value: String::from("INTEGER"),
-                        span: Span::new(27, 34),
-                    },
+                    name: Identifier::new("fourty_two", 14, 24),
+                    declared_type: Identifier::new("INTEGER", 27, 34),
                     initial_value: None,
                     span: Span::new(14, 34),
                 },
@@ -905,20 +927,11 @@ mod tests {
         END_PROGRAM
         "#;
         let expected = Program {
-            name: Identifier {
-                value: String::from("foo"),
-                span: Span::new(8, 11),
-            },
+            name: Identifier::new("foo", 8, 11),
             var_blocks: vec![VarBlock {
                 declarations: vec![VariableDeclaration {
-                    name: Identifier {
-                        value: String::from("fourty_two"),
-                        span: Span::new(53, 63),
-                    },
-                    declared_type: Identifier {
-                        value: String::from("INTEGER"),
-                        span: Span::new(65, 72),
-                    },
+                    name: Identifier::new("fourty_two", 53, 63),
+                    declared_type: Identifier::new("INTEGER", 65, 72),
                     initial_value: None,
                     span: Span::new(53, 72),
                 }],
@@ -927,10 +940,7 @@ mod tests {
             }],
             body: Block {
                 statements: vec![Statement::Assignment(Assignment {
-                    variable: Identifier {
-                        value: String::from("fourty_two"),
-                        span: Span::new(121, 131),
-                    },
+                    variable: Identifier::new("fourty_two", 121, 131),
                     value: Arc::new(Expression::Literal(Literal::Integer(
                         IntegerLiteral {
                             value: 42,
@@ -976,5 +986,203 @@ mod tests {
         let got = Program::from_str(src).unwrap();
 
         assert_eq!(got, expected);
+    }
+
+    #[test]
+    fn parse_a_function_block() {
+        let src = r#"FUNCTION_BLOCK FB_Timed_Counter
+        //=======================================================================
+        // Function Block Timed Counter :  Incremental count of the timed interval
+        //=======================================================================
+            VAR_INPUT
+                Execute         : BOOL := FALSE;        // Trigger signal to begin Timed Counting
+                Time_Increment  : REAL := 1.25;         // Enter Cycle Time (Seconds) between counts
+            END_VAR
+
+            VAR
+                CycleTimer      : TON;                  // Timer FB from Command Library
+                CycleCounter    : CTU;                  // Counter FB from Command Library
+                TimerPreset     : TIME;                 // Converted Time_Increment in Seconds to MS
+            END_VAR
+
+            Current_Count := CycleCounter;
+            Count_Complete := CycleCounter;
+        END_FUNCTION_BLOCK"#;
+        let expected = FunctionBlock {
+            name: Identifier::new("FB_Timed_Counter", 15, 31),
+            var_blocks: vec![
+                VarBlock {
+                    declarations: vec![
+                        VariableDeclaration {
+                            name: Identifier::new("Execute", 317, 324),
+                            declared_type: Identifier::new("BOOL", 335, 339),
+                            initial_value: Some(Expression::Literal(
+                                Literal::Boolean(BooleanLiteral {
+                                    value: false,
+                                    span: Span::new(343, 348),
+                                }),
+                            )),
+                            span: Span::new(317, 348),
+                        },
+                        VariableDeclaration {
+                            name: Identifier::new("Time_Increment", 415, 429),
+                            declared_type: Identifier::new("REAL", 433, 437),
+                            initial_value: Some(Expression::Literal(
+                                Literal::Float(FloatLiteral {
+                                    value: 1.25,
+                                    span: Span::new(441, 445),
+                                }),
+                            )),
+                            span: Span::new(415, 445),
+                        },
+                    ],
+                    kind: VarBlockKind::Input,
+                    span: Span::new(291, 519),
+                },
+                VarBlock {
+                    declarations: vec![
+                        VariableDeclaration {
+                            name: Identifier::new("CycleTimer", 553, 563),
+                            declared_type: Identifier::new("TON", 571, 574),
+                            initial_value: None,
+                            span: Span::new(553, 574),
+                        },
+                        VariableDeclaration {
+                            name: Identifier::new("CycleCounter", 642, 654),
+                            declared_type: Identifier::new("CTU", 660, 663),
+                            initial_value: None,
+                            span: Span::new(642, 663),
+                        },
+                        VariableDeclaration {
+                            name: Identifier::new("TimerPreset", 733, 744),
+                            declared_type: Identifier::new("TIME", 751, 755),
+                            initial_value: None,
+                            span: Span::new(733, 755),
+                        },
+                    ],
+                    kind: VarBlockKind::Normal,
+                    span: Span::new(533, 837),
+                },
+            ],
+            body: Block {
+                statements: vec![
+                    Statement::Assignment(Assignment {
+                        variable: Identifier::new("Current_Count", 851, 864),
+                        value: Arc::new(Expression::Variable(Identifier::new(
+                            "CycleCounter",
+                            868,
+                            880,
+                        ))),
+                        span: Span::new(851, 880),
+                    }),
+                    Statement::Assignment(Assignment {
+                        variable: Identifier::new("Count_Complete", 894, 908),
+                        value: Arc::new(Expression::Variable(Identifier::new(
+                            "CycleCounter",
+                            912,
+                            924,
+                        ))),
+                        span: Span::new(894, 924),
+                    }),
+                ],
+                span: Span::new(851, 925),
+            },
+            span: Span::new(0, 952),
+        };
+
+        parses_to! {
+            parser: RawParser,
+            input: src,
+            rule: Rule::function_block,
+            tokens: [
+              function_block(0, 952, [
+                identifier(15, 31),
+                preamble(291, 837, [
+                  var_block(291, 519, [
+                    input_var_block(291, 300),
+                    variable_decl(317, 348, [
+                      identifier(317, 324),
+                      identifier(335, 339),
+                      assign(340, 342),
+                      boolean(343, 348, [
+                        boolean_false(343, 348),
+                      ]),
+                    ]),
+                    variable_decl(415, 445, [
+                      identifier(415, 429),
+                      identifier(433, 437),
+                      assign(438, 440),
+                      float(441, 445),
+                    ]),
+                  ]),
+                  var_block(533, 837, [
+                    normal_var_block(533, 536),
+                    variable_decl(553, 574, [
+                      identifier(553, 563),
+                      identifier(571, 574),
+                    ]),
+                    variable_decl(642, 663, [
+                      identifier(642, 654),
+                      identifier(660, 663),
+                    ]),
+                    variable_decl(733, 755, [
+                      identifier(733, 744),
+                      identifier(751, 755),
+                    ]),
+                  ]),
+                ]),
+                block(851, 925, [
+                  statement(851, 881, [
+                    assignment(851, 880, [
+                      identifier(851, 864),
+                      assign(865, 867),
+                      identifier(868, 880),
+                    ]),
+                  ]),
+                  statement(894, 925, [
+                    assignment(894, 924, [
+                      identifier(894, 908),
+                      assign(909, 911),
+                      identifier(912, 924),
+                    ]),
+                  ]),
+                ]),
+              ]),
+            ]
+        }
+
+        let got = FunctionBlock::from_str(src).unwrap();
+
+        assert_eq!(got, expected);
+
+        // ... my god that was a pain to type out
+    }
+
+    /// A way to cheat [`parses_to!()`] when you want to see what a parse tree
+    /// would look like.
+    fn _pretty_print(pair: Pair<'_, Rule>, indent_level: usize) {
+        let span = pair.as_span();
+
+        let indent = "  ".repeat(indent_level);
+        print!(
+            "{}{:?}({}, {}",
+            indent,
+            pair.as_rule(),
+            span.start(),
+            span.end()
+        );
+
+        let children: Vec<_> = pair.into_inner().collect();
+
+        if children.is_empty() {
+            println!("),");
+        } else {
+            println!(", [");
+
+            for child in children {
+                _pretty_print(child, indent_level + 1);
+            }
+            println!("{}]),", indent);
+        }
     }
 }
