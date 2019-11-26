@@ -5,7 +5,7 @@ function_block = {
     ^"function_block" ~ identifier ~ preamble ~ block ~ ^"end_function_block" ~ ";"?
 }
 function = {
-    ^"function" ~ identifier ~ preamble ~ block ~ ^"end_function" ~ ";"?
+    ^"function" ~ identifier ~ ":" ~ identifier ~ preamble ~ block ~ ^"end_function" ~ ";"?
 }
 
 preamble = { var_block* }
