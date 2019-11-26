@@ -21,6 +21,42 @@ fn preamble(pair: Pair<'_, Rule>) -> Result<Vec<VarBlock>, ParseError> {
     derive(serde_derive::Serialize, serde_derive::Deserialize),
     serde(rename_all = "kebab-case")
 )]
+pub struct Function {
+    pub name: Identifier,
+    pub return_value : Identifier,
+    pub var_blocks: Vec<VarBlock>,
+    pub body: Block,
+    pub span: Span,
+}
+
+impl Function {
+    fn from_pair(pair: Pair<'_, Rule>) -> Result<Function, ParseError> {
+        ParseError::expect_rule(Rule::function, &pair)?;
+
+        let span = to_span(pair.as_span());
+
+        let mut items = pair.into_inner();
+        let name = Identifier::from_pair(items.next().unwrap())?;
+        let return_value = Identifier::from_pair(items.next().unwrap())?;
+        let var_blocks = preamble(items.next().unwrap())?;
+        let body = Block::from_pair(items.next().unwrap())?;
+
+        Ok(Function {
+            name,
+            return_value,
+            var_blocks,
+            body,
+            span,
+        })
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(
+    feature = "serde-1",
+    derive(serde_derive::Serialize, serde_derive::Deserialize),
+    serde(rename_all = "kebab-case")
+)]
 pub struct FunctionBlock {
     pub name: Identifier,
     pub var_blocks: Vec<VarBlock>,
@@ -1103,6 +1139,80 @@ mod tests {
                     span: Span::new(53, 72),
                 }],
                 kind: VarBlockKind::Global,
+                span: Span::new(25, 94),
+            }],
+            body: Block {
+                statements: vec![Statement::Assignment(Assignment {
+                    variable: Identifier::new("fourty_two", 121, 131),
+                    value: Expression::Literal(Literal::Integer(
+                        IntegerLiteral {
+                            value: 42,
+                            span: Span::new(135, 137),
+                        },
+                    )),
+                    span: Span::new(121, 137),
+                })],
+                span: Span::new(121, 138),
+            },
+            span: Span::new(0, 168),
+        };
+
+        parses_to! {
+            parser: RawParser,
+            input: src,
+            rule: Rule::program,
+            tokens: [
+                program(0, 168, [
+                    identifier(8, 11),
+                    preamble(25, 94, [
+                        var_block(25, 94, [
+                            global_var_block(25, 35),
+                            variable_decl(53, 72, [
+                                identifier(53, 63),
+                                identifier(65, 72),
+                            ]),
+                        ]),
+                    ]),
+                    block(121, 138, [
+                        statement(121, 138, [
+                            assignment(121, 137, [
+                                identifier(121, 131),
+                                assign(132, 134),
+                                integer(135, 137, [integer_decimal(135, 137)]),
+                            ])
+                        ])
+                    ]),
+                ]),
+            ]
+        }
+
+        let got = Program::from_str(src).unwrap();
+
+        assert_eq!(got, expected);
+    }
+
+    #[test]
+    fn parse_a_function() {
+        let src = r#"function AddOne : INTEGER 
+            VAR_INPUT 
+                input : INTEGER; 
+            END_VAR 
+            
+            AddOne := input + 1;
+
+        END_PROGRAM
+        "#;
+        let expected = Function {
+            name: Identifier::new("AddOne", 9, 15),
+            return_value : Identifier::new("INTEGER", 17, 25),
+            var_blocks: vec![VarBlock {
+                declarations: vec![VariableDeclaration {
+                    name: Identifier::new("input", 36, 42),
+                    declared_type: Identifier::new("INTEGER", 44, 52),
+                    initial_value: None,
+                    span: Span::new(53, 72) // TODO,
+                }],
+                kind: VarBlockKind::Normal,
                 span: Span::new(25, 94),
             }],
             body: Block {
