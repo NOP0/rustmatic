@@ -107,7 +107,7 @@ keyword = {
     ^"var_global" | 
     ^"var_input" | 
     ^"var_output" | 
-    ^"var_in_out"
+    ^"var_in_out" |
     ^"var" | 
     ^"while" | 
     ^"with" 
