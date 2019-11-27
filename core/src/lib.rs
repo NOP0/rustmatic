@@ -2,10 +2,12 @@
 
 mod device;
 mod device_manager;
+mod process_image;
 
 pub use crate::{
     device::{Device, DeviceError, DeviceRegistrar},
     device_manager::{DeviceManager, Devices},
+    process_image::ProcessImage,
 };
 
 use std::time::Instant;
@@ -52,7 +54,11 @@ slotmap::new_key_type! {
 pub trait Process {
     type Fault;
 
-    fn poll(&mut self, system: &dyn System) -> Transition<Self::Fault>;
+    fn poll(
+        &mut self,
+        system: &dyn System,
+        process_image: &mut ProcessImage,
+    ) -> Transition<Self::Fault>;
 }
 
 /// What should we do after polling a [`Process`]?

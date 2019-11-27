@@ -1,7 +1,8 @@
 //! The system in charge of working with IO and executing processes.
 
 use rustmatic_core::{
-    DeviceManager, Process, System, Transition, Value, VariableIndex,
+    DeviceManager, Process, ProcessImage, System, Transition, Value,
+    VariableIndex,
 };
 use slotmap::DenseSlotMap;
 use std::{cell::RefCell, time::Instant};
@@ -17,6 +18,7 @@ type Variables = DenseSlotMap<VariableIndex, Variable>;
 /// The PLC runtime.
 pub struct Runtime {
     pub(crate) devices: DeviceManager,
+    pub(crate) process_image: ProcessImage,
     pub(crate) processes: Processes,
     pub(crate) variables: Variables,
 }
@@ -26,6 +28,7 @@ impl Runtime {
     pub fn new() -> Self {
         Runtime {
             devices: DeviceManager::new(),
+            process_image: ProcessImage::new(),
             processes: Processes::with_key(),
             variables: Variables::with_key(),
         }
@@ -62,12 +65,12 @@ impl Runtime {
                 variables: RefCell::new(&mut self.variables),
             };
 
-            match process.poll(&ctx) {
+            match process.poll(&ctx, &mut self.process_image) {
                 Transition::Completed => to_remove.push(pid),
-                Transition::StillRunning => {},
+                Transition::StillRunning => {}
                 Transition::Fault(fault) => {
                     faults.push((pid, fault));
-                },
+                }
             }
         }
 
@@ -91,9 +94,13 @@ struct Context<'a> {
 }
 
 impl<'a> System for Context<'a> {
-    fn devices(&self) -> &DeviceManager { self.devices }
+    fn devices(&self) -> &DeviceManager {
+        self.devices
+    }
 
-    fn now(&self) -> Instant { Instant::now() }
+    fn now(&self) -> Instant {
+        Instant::now()
+    }
 
     fn declare_variable(
         &self,
