@@ -1,14 +1,10 @@
 # Rustmatic
 
-Rustmatic is an attempt at creating a PLC like environment programmable in Rust. 
-
-It's currently in the brainstorming, proof-of-concept phase.
-All suggestions etc. are welcome.
+Rustmatic is a thought experiment on creating a PLC-like environment in Rust. 
+Do not use for anything serious.
 
 # Goals
 
-* Permissive License, Apache 2.0
-* Leverage Embedded Working Group Software where applicable 
 * For the casual PLC programmer: High focus on simplicity and ergonomics, without having to know advanced Rust
 * The advanced PLC programmer will still have the complete Rust toolbox available
 * Ergonomics in use: Download, monitoring in run
@@ -17,6 +13,8 @@ All suggestions etc. are welcome.
 * Graphical programming in LAD, SFC?
 * Single stepping, single cycle
 * Standardized interface to HMI
+* Leverage Embedded Working Group Software where applicable 
+* Permissive License, Apache 2.0
 
 # Overview
 ![Overview](Overview.png)
