@@ -1,7 +1,12 @@
 # Rustmatic
 
+<<<<<<< HEAD
 Rustmatic is a thought experiment on creating a PLC-like environment in Rust. 
 Do not use for anything serious.
+=======
+Rustmatic is a thought experiment on creating a PLC like environment programmable in Rust.
+Do not use for anything serious. 
+>>>>>>> c766a52... Changed some wording in readme
 
 # Goals
 
