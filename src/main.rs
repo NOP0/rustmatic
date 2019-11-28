@@ -1,7 +1,9 @@
 use rustmatic_core::{Process, ProcessImage, System, Transition};
 use rustmatic_runtime::{Fault, Runtime};
 
-    struct PlcMain;
+    struct PlcMain{
+        cycle_counter : i32,
+    }
 
     impl Process for PlcMain {
         type Fault = Fault;
@@ -28,14 +30,24 @@ use rustmatic_runtime::{Fault, Runtime};
             pi.write(my_float, 3.14);
 
             println!("my_float is:{}", pi.read::<f64>(my_float));
+            
+            self.cycle_counter += 1;
 
-            Transition::StillRunning
+            if self.cycle_counter < 1000 {
+                Transition::StillRunning
+            }
+            else {
+                Transition::Completed
+            }
+
         }
     }
 fn main() {
     let mut runtime = Runtime::new();
 
-    runtime.add_process(PlcMain);
+    runtime.add_process(PlcMain{cycle_counter: 0});
 
+    while runtime.iter_processes().count() > 0 {
     let _ = runtime.poll();
+    }
 }
