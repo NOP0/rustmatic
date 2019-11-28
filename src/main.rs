@@ -1,9 +1,5 @@
 use rustmatic_core::{Process, ProcessImage, System, Transition};
 use rustmatic_runtime::{Fault, Runtime};
-fn main() {
-    //Example usage
-
-    let mut runtime = Runtime::new();
 
     struct PlcMain;
 
@@ -36,6 +32,8 @@ fn main() {
             Transition::StillRunning
         }
     }
+fn main() {
+    let mut runtime = Runtime::new();
 
     runtime.add_process(PlcMain);
 
