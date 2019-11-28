@@ -56,6 +56,7 @@ impl Runtime {
         let mut to_remove = Vec::new();
         let mut faults = Vec::new();
 
+        // TODO: Here we need to copy between devices and process image.
         // poll all registered process
         for (pid, process) in &mut self.processes {
             // set up the device context

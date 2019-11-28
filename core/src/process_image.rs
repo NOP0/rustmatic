@@ -8,6 +8,7 @@ pub struct InputChannels<T>(DenseSlotMap<InputNumber, T>);
 impl<T> Default for InputChannels<T> {
     fn default() -> InputChannels<T> { InputChannels(DenseSlotMap::with_key()) }
 }
+// TODO: Implement for OutputChannels
 pub struct OutputChannels<T>(DenseSlotMap<OutputNumber, T>);
 
 pub struct ProcessImage {
