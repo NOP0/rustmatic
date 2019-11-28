@@ -1210,23 +1210,33 @@ mod tests {
                     name: Identifier::new("input", 36, 42),
                     declared_type: Identifier::new("INTEGER", 44, 52),
                     initial_value: None,
-                    span: Span::new(53, 72) // TODO,
+                    span: Span::new(53, 72)
                 }],
-                kind: VarBlockKind::Normal,
+                kind: VarBlockKind::Input,
                 span: Span::new(25, 94),
             }],
             body: Block {
-                statements: vec![Statement::Assignment(Assignment {
-                    variable: Identifier::new("fourty_two", 121, 131),
-                    value: Expression::Literal(Literal::Integer(
-                        IntegerLiteral {
-                            value: 42,
-                            span: Span::new(135, 137),
-                        },
-                    )),
-                    span: Span::new(121, 137),
-                })],
+                statements: vec![Statement::Assignment(
+                    Assignment {
+                    variable: Identifier::new("AddOne", 121, 131),
+                    value: Expression::BinaryExpression( 
+                        {
+                        left: Box::new(Expression::Variable(Identifier{
+                            value: String::from("input"),
+                            span: Span::new(0, 1),
+                        })),
+                        right: Box::new(Expression::Literal(Literal::Integer({
+                            IntegerLiteral {
+                                value: 1,
+                                span: Span::new(135, 137),
+                            }
+                        }))),
+                        op: BinaryOp::Add,
+                        span: Span::new(0, 5),
+                        }),
                 span: Span::new(121, 138),
+                })],
+            span: Span::new(0, 168),
             },
             span: Span::new(0, 168),
         };
@@ -1236,14 +1246,14 @@ mod tests {
             input: src,
             rule: Rule::program,
             tokens: [
-                program(0, 168, [
+                function(0, 168, [
+                    identifier(8, 11),
                     identifier(8, 11),
                     preamble(25, 94, [
                         var_block(25, 94, [
-                            global_var_block(25, 35),
+                            input_var_block(25, 35),
                             variable_decl(53, 72, [
                                 identifier(53, 63),
-                                identifier(65, 72),
                             ]),
                         ]),
                     ]),
@@ -1252,12 +1262,15 @@ mod tests {
                             assignment(121, 137, [
                                 identifier(121, 131),
                                 assign(132, 134),
-                                integer(135, 137, [integer_decimal(135, 137)]),
+                                infix(0, 5, [
+                                    identifier(0, 1),
+                                    plus(2, 3),
+                                    integer(135, 137, [integer_decimal(135, 137)]),
                             ])
                         ])
                     ]),
                 ]),
-            ]
+            ])]
         }
 
         let got = Program::from_str(src).unwrap();
