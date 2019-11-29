@@ -34,6 +34,8 @@ pub trait System {
     fn read_variable(&self, index: VariableIndex) -> Option<Value>;
     /// Give a variable a new value.
     fn set_variable(&self, index: VariableIndex, new_value: Value);
+
+    fn process_image(&self) -> &ProcessImage;
 }
 
 slotmap::new_key_type! {
@@ -57,7 +59,6 @@ pub trait Process {
     fn poll(
         &mut self,
         system: &dyn System,
-        process_image: &mut ProcessImage,
     ) -> Transition<Self::Fault>;
 }
 

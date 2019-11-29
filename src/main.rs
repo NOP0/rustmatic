@@ -10,10 +10,11 @@ use rustmatic_runtime::{Fault, Runtime};
 
         fn poll(
             &mut self,
-            _system: &dyn System,
-            pi: &mut ProcessImage,
+            system: &dyn System,
         ) -> Transition<Self::Fault> {
             println!("PlcMain running!");
+
+            let pi = system.process_image(); // Get handle to ProcessImage
 
             let my_bool = pi.register_input(false);
 

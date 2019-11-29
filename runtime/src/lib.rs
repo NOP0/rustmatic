@@ -62,11 +62,12 @@ impl Runtime {
             // set up the device context
             let ctx = Context {
                 devices: &self.devices,
+                process_image: &self.process_image,
                 current_process: pid,
                 variables: RefCell::new(&mut self.variables),
             };
 
-            match process.poll(&ctx, &mut self.process_image) {
+            match process.poll(&ctx) {
                 Transition::Completed => to_remove.push(pid),
                 Transition::StillRunning => {}
                 Transition::Fault(fault) => {
@@ -90,6 +91,7 @@ pub enum Fault {}
 /// known by our [`Runtime`].
 struct Context<'a> {
     devices: &'a DeviceManager,
+    process_image : &'a ProcessImage,
     variables: RefCell<&'a mut Variables>,
     current_process: ProcessIndex,
 }
@@ -129,6 +131,10 @@ impl<'a> System for Context<'a> {
             let mut value = var.value.borrow_mut();
             *value = new_value;
         }
+    }
+
+    fn process_image(&self) -> &ProcessImage{
+        self.process_image
     }
 }
 
