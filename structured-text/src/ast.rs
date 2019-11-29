@@ -6,6 +6,9 @@ use codespan::Span;
 use pest::{iterators::Pair, Parser};
 use std::str::FromStr;
 
+#[cfg(test)]
+use pretty_assertions::{assert_eq};
+
 fn to_span(pest_span: pest::Span<'_>) -> Span {
     Span::new(pest_span.start() as u32, pest_span.end() as u32)
 }
@@ -738,6 +741,7 @@ impl_from_str! {
     VarBlock => var_block,
     VarBlockKind => var_block_kind,
     Program => program,
+    Function => function,
     FunctionBlock => function_block,
     Conditional => conditional,
 }
@@ -1193,87 +1197,77 @@ mod tests {
 
     #[test]
     fn parse_a_function() {
-        let src = r#"function AddOne : INTEGER 
+        let src = r#"FUNCTION ReturnFive : INTEGER
             VAR_INPUT 
-                input : INTEGER; 
+                input: INTEGER; 
             END_VAR 
             
-            AddOne := input + 1;
+            ReturnFive := 5;
 
-        END_PROGRAM
+        END_FUNCTION
         "#;
         let expected = Function {
-            name: Identifier::new("AddOne", 9, 15),
-            return_value : Identifier::new("INTEGER", 17, 25),
-            var_blocks: vec![VarBlock {
-                declarations: vec![VariableDeclaration {
-                    name: Identifier::new("input", 36, 42),
-                    declared_type: Identifier::new("INTEGER", 44, 52),
+                name: Identifier::new("ReturnFive", 9, 19),
+                return_value : Identifier::new("INTEGER", 22, 29),
+                var_blocks: vec![VarBlock {
+                    declarations: vec![VariableDeclaration {
+                    name: Identifier::new("input", 69, 74),
+                    declared_type: Identifier::new("INTEGER", 76, 83),
                     initial_value: None,
-                    span: Span::new(53, 72)
-                }],
+                    span: Span::new(69, 83)
+                    }],
                 kind: VarBlockKind::Input,
-                span: Span::new(25, 94),
-            }],
-            body: Block {
-                statements: vec![Statement::Assignment(
-                    Assignment {
-                    variable: Identifier::new("AddOne", 121, 131),
-                    value: Expression::BinaryExpression( 
-                        {
-                        left: Box::new(Expression::Variable(Identifier{
-                            value: String::from("input"),
-                            span: Span::new(0, 1),
-                        })),
-                        right: Box::new(Expression::Literal(Literal::Integer({
+                span: Span::new(42, 105),
+                }],
+                body: Block {
+                    statements: vec![Statement::Assignment(Assignment {
+                        variable: Identifier::new("ReturnFive", 132, 142),
+                        value: Expression::Literal(Literal::Integer(
                             IntegerLiteral {
-                                value: 1,
-                                span: Span::new(135, 137),
-                            }
-                        }))),
-                        op: BinaryOp::Add,
-                        span: Span::new(0, 5),
-                        }),
-                span: Span::new(121, 138),
-                })],
-            span: Span::new(0, 168),
-            },
-            span: Span::new(0, 168),
+                                value: 5,
+                                span: Span::new(146, 147),
+                            },
+                        )),
+                    span: Span::new(132, 147),
+                    })],
+                span: Span::new(132, 148),
+                    },
+            span: Span::new(0, 179),
         };
 
         parses_to! {
             parser: RawParser,
             input: src,
-            rule: Rule::program,
+            rule: Rule::function,
             tokens: [
-                function(0, 168, [
-                    identifier(8, 11),
-                    identifier(8, 11),
-                    preamble(25, 94, [
-                        var_block(25, 94, [
-                            input_var_block(25, 35),
-                            variable_decl(53, 72, [
-                                identifier(53, 63),
+                function(0, 179, [
+                    identifier(9, 19),
+                    identifier(22, 29),
+                    preamble(42, 105, [
+                        var_block(42, 105, [
+                            input_var_block(42, 51),
+                            variable_decl(69, 83, [
+                                identifier(69, 74),
+                                identifier(76, 83),
                             ]),
                         ]),
                     ]),
-                    block(121, 138, [
-                        statement(121, 138, [
-                            assignment(121, 137, [
-                                identifier(121, 131),
-                                assign(132, 134),
-                                infix(0, 5, [
-                                    identifier(0, 1),
-                                    plus(2, 3),
-                                    integer(135, 137, [integer_decimal(135, 137)]),
-                            ])
-                        ])
+                    block(132, 148, [
+                        statement(132, 148, [
+                            assignment(132, 147, [
+                                identifier(132, 142),
+                                assign(143, 145),
+                                integer(146, 147, [
+                                    integer_decimal(146,147),
+                                ]),
+                            ]),
+                        ]),
                     ]),
-                ]),
-            ])]
+                ])
+            ]
         }
 
-        let got = Program::from_str(src).unwrap();
+        let got = Function::from_str(src).unwrap();
 
         assert_eq!(got, expected);
     }
