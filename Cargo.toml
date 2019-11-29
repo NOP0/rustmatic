@@ -10,6 +10,7 @@ license = "MIT OR Apache-2.0"
 [dependencies]
 rustmatic-core = {path = "./core"}
 rustmatic-runtime = { path = "./runtime" }
+rustmatic-gpio = { path = "./gpio" }
 
 [workspace]
 members = ["core", "runtime", "gpio", "structured-text"]

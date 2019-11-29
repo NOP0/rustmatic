@@ -18,7 +18,7 @@ type Variables = DenseSlotMap<VariableIndex, Variable>;
 /// The PLC runtime.
 pub struct Runtime {
     pub(crate) devices: DeviceManager,
-    pub(crate) process_image: ProcessImage,
+    pub process_image: ProcessImage, // TODO: Public for testing in userspace. How to keep this private?
     pub(crate) processes: Processes,
     pub(crate) variables: Variables,
 }
@@ -80,6 +80,20 @@ impl Runtime {
         self.processes.retain(|pid, _| !to_remove.contains(&pid));
 
         faults
+    }
+
+    pub fn init(&mut self) -> Result<(), Fault>{
+        for (pid, process) in &mut self.processes {
+        // set up the device context
+            let ctx = Context {
+                devices: &self.devices,
+                process_image: &self.process_image,
+                current_process: pid,
+                variables: RefCell::new(&mut self.variables),
+            };
+            process.init(&ctx); // TODO handle errors
+        }
+        Ok(())
     }
 }
 
