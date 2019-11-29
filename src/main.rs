@@ -1,4 +1,4 @@
-use rustmatic_core::{Process, ProcessImage, System, Transition};
+use rustmatic_core::{Process, System, Transition};
 use rustmatic_runtime::{Fault, Runtime};
 
     struct PlcMain{
@@ -18,19 +18,19 @@ use rustmatic_runtime::{Fault, Runtime};
 
             let my_bool = pi.register_input(false);
 
-            println!("my_bool is:{}", pi.read::<bool>(my_bool));
+            println!("my_bool is:{}", pi.read(my_bool));
 
             pi.write(my_bool, true);
 
-            println!("my_bool is:{}", pi.read::<bool>(my_bool));
+            println!("my_bool is:{}", pi.read(my_bool));
 
             let my_float = pi.register_input(0.0);
 
-            println!("my_float is:{}", pi.read::<f64>(my_float));
+            println!("my_float is:{}", pi.read(my_float));
 
             pi.write(my_float, 3.14);
 
-            println!("my_float is:{}", pi.read::<f64>(my_float));
+            println!("my_float is:{}", pi.read(my_float));
             
             self.cycle_counter += 1;
 
