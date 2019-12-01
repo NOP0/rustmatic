@@ -7,7 +7,7 @@ use pest::{iterators::Pair, Parser};
 use std::str::FromStr;
 
 #[cfg(test)]
-use pretty_assertions::{assert_eq};
+use pretty_assertions::assert_eq;
 
 fn to_span(pest_span: pest::Span<'_>) -> Span {
     Span::new(pest_span.start() as u32, pest_span.end() as u32)
@@ -26,7 +26,7 @@ fn preamble(pair: Pair<'_, Rule>) -> Result<Vec<VarBlock>, ParseError> {
 )]
 pub struct Function {
     pub name: Identifier,
-    pub return_type : Identifier,
+    pub return_type: Identifier,
     pub var_blocks: Vec<VarBlock>,
     pub body: Block,
     pub span: Span,
@@ -1207,31 +1207,31 @@ mod tests {
         END_FUNCTION
         "#;
         let expected = Function {
-                name: Identifier::new("ReturnFive", 9, 19),
-                return_type : Identifier::new("INTEGER", 22, 29),
-                var_blocks: vec![VarBlock {
-                    declarations: vec![VariableDeclaration {
+            name: Identifier::new("ReturnFive", 9, 19),
+            return_type: Identifier::new("INTEGER", 22, 29),
+            var_blocks: vec![VarBlock {
+                declarations: vec![VariableDeclaration {
                     name: Identifier::new("input", 69, 74),
                     declared_type: Identifier::new("INTEGER", 76, 83),
                     initial_value: None,
-                    span: Span::new(69, 83)
-                    }],
+                    span: Span::new(69, 83),
+                }],
                 kind: VarBlockKind::Input,
                 span: Span::new(42, 105),
-                }],
-                body: Block {
-                    statements: vec![Statement::Assignment(Assignment {
-                        variable: Identifier::new("ReturnFive", 132, 142),
-                        value: Expression::Literal(Literal::Integer(
-                            IntegerLiteral {
-                                value: 5,
-                                span: Span::new(146, 147),
-                            },
-                        )),
+            }],
+            body: Block {
+                statements: vec![Statement::Assignment(Assignment {
+                    variable: Identifier::new("ReturnFive", 132, 142),
+                    value: Expression::Literal(Literal::Integer(
+                        IntegerLiteral {
+                            value: 5,
+                            span: Span::new(146, 147),
+                        },
+                    )),
                     span: Span::new(132, 147),
-                    })],
+                })],
                 span: Span::new(132, 148),
-                    },
+            },
             span: Span::new(0, 179),
         };
 
@@ -1448,7 +1448,9 @@ mod tests {
         let expected = Conditional {
             true_branch: ConditionalBranch {
                 condition: Expression::BinaryExpression(BinaryExpression {
-                    left: Box::new(Expression::Variable(Identifier::new("x", 3, 4))),
+                    left: Box::new(Expression::Variable(Identifier::new(
+                        "x", 3, 4,
+                    ))),
                     right: Box::new(Expression::Literal(Literal::Boolean(
                         BooleanLiteral {
                             value: true,
