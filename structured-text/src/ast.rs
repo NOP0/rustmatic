@@ -26,7 +26,7 @@ fn preamble(pair: Pair<'_, Rule>) -> Result<Vec<VarBlock>, ParseError> {
 )]
 pub struct Function {
     pub name: Identifier,
-    pub return_value : Identifier,
+    pub return_type : Identifier,
     pub var_blocks: Vec<VarBlock>,
     pub body: Block,
     pub span: Span,
@@ -40,13 +40,13 @@ impl Function {
 
         let mut items = pair.into_inner();
         let name = Identifier::from_pair(items.next().unwrap())?;
-        let return_value = Identifier::from_pair(items.next().unwrap())?;
+        let return_type = Identifier::from_pair(items.next().unwrap())?;
         let var_blocks = preamble(items.next().unwrap())?;
         let body = Block::from_pair(items.next().unwrap())?;
 
         Ok(Function {
             name,
-            return_value,
+            return_type,
             var_blocks,
             body,
             span,
@@ -1208,7 +1208,7 @@ mod tests {
         "#;
         let expected = Function {
                 name: Identifier::new("ReturnFive", 9, 19),
-                return_value : Identifier::new("INTEGER", 22, 29),
+                return_type : Identifier::new("INTEGER", 22, 29),
                 var_blocks: vec![VarBlock {
                     declarations: vec![VariableDeclaration {
                     name: Identifier::new("input", 69, 74),
