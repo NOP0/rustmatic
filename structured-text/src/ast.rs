@@ -6,6 +6,9 @@ use codespan::Span;
 use pest::{iterators::Pair, Parser};
 use std::str::FromStr;
 
+#[cfg(test)]
+use pretty_assertions::assert_eq;
+
 fn to_span(pest_span: pest::Span<'_>) -> Span {
     Span::new(pest_span.start() as u32, pest_span.end() as u32)
 }
@@ -13,6 +16,42 @@ fn to_span(pest_span: pest::Span<'_>) -> Span {
 fn preamble(pair: Pair<'_, Rule>) -> Result<Vec<VarBlock>, ParseError> {
     ParseError::expect_rule(Rule::preamble, &pair)?;
     pair.into_inner().map(VarBlock::from_pair).collect()
+}
+
+#[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(
+    feature = "serde-1",
+    derive(serde_derive::Serialize, serde_derive::Deserialize),
+    serde(rename_all = "kebab-case")
+)]
+pub struct Function {
+    pub name: Identifier,
+    pub return_type: Identifier,
+    pub var_blocks: Vec<VarBlock>,
+    pub body: Block,
+    pub span: Span,
+}
+
+impl Function {
+    fn from_pair(pair: Pair<'_, Rule>) -> Result<Function, ParseError> {
+        ParseError::expect_rule(Rule::function, &pair)?;
+
+        let span = to_span(pair.as_span());
+
+        let mut items = pair.into_inner();
+        let name = Identifier::from_pair(items.next().unwrap())?;
+        let return_type = Identifier::from_pair(items.next().unwrap())?;
+        let var_blocks = preamble(items.next().unwrap())?;
+        let body = Block::from_pair(items.next().unwrap())?;
+
+        Ok(Function {
+            name,
+            return_type,
+            var_blocks,
+            body,
+            span,
+        })
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -702,6 +741,7 @@ impl_from_str! {
     VarBlock => var_block,
     VarBlockKind => var_block_kind,
     Program => program,
+    Function => function,
     FunctionBlock => function_block,
     Conditional => conditional,
 }
@@ -1156,6 +1196,83 @@ mod tests {
     }
 
     #[test]
+    fn parse_a_function() {
+        let src = r#"FUNCTION ReturnFive : INTEGER
+            VAR_INPUT 
+                input: INTEGER; 
+            END_VAR 
+            
+            ReturnFive := 5;
+
+        END_FUNCTION
+        "#;
+        let expected = Function {
+            name: Identifier::new("ReturnFive", 9, 19),
+            return_type: Identifier::new("INTEGER", 22, 29),
+            var_blocks: vec![VarBlock {
+                declarations: vec![VariableDeclaration {
+                    name: Identifier::new("input", 69, 74),
+                    declared_type: Identifier::new("INTEGER", 76, 83),
+                    initial_value: None,
+                    span: Span::new(69, 83),
+                }],
+                kind: VarBlockKind::Input,
+                span: Span::new(42, 105),
+            }],
+            body: Block {
+                statements: vec![Statement::Assignment(Assignment {
+                    variable: Identifier::new("ReturnFive", 132, 142),
+                    value: Expression::Literal(Literal::Integer(
+                        IntegerLiteral {
+                            value: 5,
+                            span: Span::new(146, 147),
+                        },
+                    )),
+                    span: Span::new(132, 147),
+                })],
+                span: Span::new(132, 148),
+            },
+            span: Span::new(0, 179),
+        };
+
+        parses_to! {
+            parser: RawParser,
+            input: src,
+            rule: Rule::function,
+            tokens: [
+                function(0, 179, [
+                    identifier(9, 19),
+                    identifier(22, 29),
+                    preamble(42, 105, [
+                        var_block(42, 105, [
+                            input_var_block(42, 51),
+                            variable_decl(69, 83, [
+                                identifier(69, 74),
+                                identifier(76, 83),
+                            ]),
+                        ]),
+                    ]),
+                    block(132, 148, [
+                        statement(132, 148, [
+                            assignment(132, 147, [
+                                identifier(132, 142),
+                                assign(143, 145),
+                                integer(146, 147, [
+                                    integer_decimal(146,147),
+                                ]),
+                            ]),
+                        ]),
+                    ]),
+                ])
+            ]
+        }
+
+        let got = Function::from_str(src).unwrap();
+
+        assert_eq!(got, expected);
+    }
+
+    #[test]
     fn parse_a_function_block() {
         let src = r#"FUNCTION_BLOCK FB_Timed_Counter
         //=======================================================================
@@ -1331,7 +1448,9 @@ mod tests {
         let expected = Conditional {
             true_branch: ConditionalBranch {
                 condition: Expression::BinaryExpression(BinaryExpression {
-                    left: Box::new(Expression::Variable(Identifier::new("x", 3, 4))),
+                    left: Box::new(Expression::Variable(Identifier::new(
+                        "x", 3, 4,
+                    ))),
                     right: Box::new(Expression::Literal(Literal::Boolean(
                         BooleanLiteral {
                             value: true,
