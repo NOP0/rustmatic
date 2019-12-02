@@ -86,20 +86,25 @@ unary_operator              = _{ plus | minus }
 keyword = {
     ^"at" | 
     ^"by" |
+    ^"case" |
     ^"configuration" | 
     ^"do" |
     ^"else" | 
-    ^"elsif" | 
+    ^"elsif" |
+    ^"end_case" | 
     ^"end_configuration" | 
+    ^"end_function" |
     ^"end_function_block" | 
     ^"end_if" | 
     ^"end_program" | 
     ^"end_repeat" |
     ^"end_while" | 
+    ^"function" |
     ^"function_block" | 
     ^"if" | 
     ^"program" | 
-    ^"repeat" | 
+    ^"repeat" |
+    ^"resource" | 
     ^"task" | 
     ^"then" | 
     ^"until" | 
