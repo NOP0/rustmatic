@@ -137,11 +137,7 @@ else_branch = {
 
 
 case = {
-<<<<<<< HEAD
     ^"case" ~ expression ~ ^"of" ~ case_branch+ ~ else_branch? ~ ^"end_case"
-=======
-    ^"case" ~ ^"of" ~ case_branch+ ~ else_branch? ~ ^"end_case"
->>>>>>> 111464798fc93ab9bad9e57744b243e243f4ce69
 }
 
 case_branch = {
