@@ -807,23 +807,23 @@ mod tests {
 
     #[test]
     fn variable_decl_with_default_value() {
-        let src = "x: INTEGER := 42";
+        let src = "x: INT := 42";
         let expected = VariableDeclaration {
             name: Identifier {
                 value: String::from("x"),
                 span: Span::new(0, 1),
             },
             declared_type: Identifier {
-                value: String::from("INTEGER"),
-                span: Span::new(3, 10),
+                value: String::from("INT"),
+                span: Span::new(3, 6),
             },
             initial_value: Some(Expression::Literal(Literal::Integer(
                 IntegerLiteral {
                     value: 42,
-                    span: Span::new(14, 16),
+                    span: Span::new(10, 12),
                 },
             ))),
-            span: Span::new(0, 16),
+            span: Span::new(0, 12),
         };
 
         parses_to! {
@@ -831,11 +831,11 @@ mod tests {
             input: src,
             rule: Rule::variable_decl,
             tokens: [
-                variable_decl(0, 16, [
+                variable_decl(0, 12, [
                     identifier(0, 1),
-                    identifier(3, 10),
-                    assign(11, 13),
-                    integer(14, 16, [integer_decimal(14, 16)]),
+                    identifier(3, 6),
+                    assign(7, 9),
+                    integer(10, 12, [integer_decimal(10, 12)]),
                 ])
             ]
         }
@@ -1079,7 +1079,7 @@ mod tests {
 
     #[test]
     fn var_block_with_two_decls() {
-        let src = "VAR\nx : BOOL;\nfourty_two : INTEGER;\nEND_VAR";
+        let src = "VAR\nx : BOOL;\nfourty_two : INT;\nEND_VAR";
         let expected = VarBlock {
             declarations: vec![
                 VariableDeclaration {
@@ -1090,13 +1090,13 @@ mod tests {
                 },
                 VariableDeclaration {
                     name: Identifier::new("fourty_two", 14, 24),
-                    declared_type: Identifier::new("INTEGER", 27, 34),
+                    declared_type: Identifier::new("INT", 27, 30),
                     initial_value: None,
-                    span: Span::new(14, 34),
+                    span: Span::new(14, 30),
                 },
             ],
             kind: VarBlockKind::Normal,
-            span: Span::new(0, 43),
+            span: Span::new(0, 39),
         };
 
         parses_to! {
@@ -1104,15 +1104,15 @@ mod tests {
             input: src,
             rule: Rule::var_block,
             tokens: [
-                var_block(0, 43, [
+                var_block(0, 39, [
                     normal_var_block(0, 3),
                     variable_decl(4, 12, [
                         identifier(4, 5),
                         identifier(8, 12),
                     ]),
-                    variable_decl(14, 34, [
+                    variable_decl(14, 30, [
                         identifier(14, 24),
-                        identifier(27, 34),
+                        identifier(27, 30),
                     ]),
                 ]),
             ]
@@ -1127,7 +1127,7 @@ mod tests {
     fn parse_a_program() {
         let src = r#"PROGRAM foo 
             VAR_GLOBAL 
-                fourty_two: INTEGER; 
+                fourty_two: INT; 
             END_VAR 
             
             fourty_two := 42; 
@@ -1138,27 +1138,27 @@ mod tests {
             var_blocks: vec![VarBlock {
                 declarations: vec![VariableDeclaration {
                     name: Identifier::new("fourty_two", 53, 63),
-                    declared_type: Identifier::new("INTEGER", 65, 72),
+                    declared_type: Identifier::new("INT", 65, 68),
                     initial_value: None,
-                    span: Span::new(53, 72),
+                    span: Span::new(53, 68),
                 }],
                 kind: VarBlockKind::Global,
-                span: Span::new(25, 94),
+                span: Span::new(25, 90),
             }],
             body: Block {
                 statements: vec![Statement::Assignment(Assignment {
-                    variable: Identifier::new("fourty_two", 121, 131),
+                    variable: Identifier::new("fourty_two", 117, 127),
                     value: Expression::Literal(Literal::Integer(
                         IntegerLiteral {
                             value: 42,
-                            span: Span::new(135, 137),
+                            span: Span::new(131, 133),
                         },
                     )),
-                    span: Span::new(121, 137),
+                    span: Span::new(117, 133),
                 })],
-                span: Span::new(121, 138),
+                span: Span::new(117, 134),
             },
-            span: Span::new(0, 168),
+            span: Span::new(0, 164),
         };
 
         parses_to! {
@@ -1166,23 +1166,23 @@ mod tests {
             input: src,
             rule: Rule::program,
             tokens: [
-                program(0, 168, [
+                program(0, 164, [
                     identifier(8, 11),
-                    preamble(25, 94, [
-                        var_block(25, 94, [
+                    preamble(25, 90, [
+                        var_block(25, 90, [
                             global_var_block(25, 35),
-                            variable_decl(53, 72, [
+                            variable_decl(53, 68, [
                                 identifier(53, 63),
-                                identifier(65, 72),
+                                identifier(65, 68),
                             ]),
                         ]),
                     ]),
-                    block(121, 138, [
-                        statement(121, 138, [
-                            assignment(121, 137, [
-                                identifier(121, 131),
-                                assign(132, 134),
-                                integer(135, 137, [integer_decimal(135, 137)]),
+                    block(117, 134, [
+                        statement(117, 134, [
+                            assignment(117, 133, [
+                                identifier(117, 127),
+                                assign(128, 130),
+                                integer(131, 133, [integer_decimal(131, 133)]),
                             ])
                         ])
                     ]),
@@ -1197,9 +1197,9 @@ mod tests {
 
     #[test]
     fn parse_a_function() {
-        let src = r#"FUNCTION ReturnFive : INTEGER
+        let src = r#"FUNCTION ReturnFive : INT
             VAR_INPUT 
-                input: INTEGER; 
+                input: INT; 
             END_VAR 
             
             ReturnFive := 5;
@@ -1208,31 +1208,31 @@ mod tests {
         "#;
         let expected = Function {
             name: Identifier::new("ReturnFive", 9, 19),
-            return_type: Identifier::new("INTEGER", 22, 29),
+            return_type: Identifier::new("INT", 22, 25),
             var_blocks: vec![VarBlock {
                 declarations: vec![VariableDeclaration {
-                    name: Identifier::new("input", 69, 74),
-                    declared_type: Identifier::new("INTEGER", 76, 83),
+                    name: Identifier::new("input", 65, 70),
+                    declared_type: Identifier::new("INT", 72, 75),
                     initial_value: None,
-                    span: Span::new(69, 83),
+                    span: Span::new(65, 75),
                 }],
                 kind: VarBlockKind::Input,
-                span: Span::new(42, 105),
+                span: Span::new(38, 97),
             }],
             body: Block {
                 statements: vec![Statement::Assignment(Assignment {
-                    variable: Identifier::new("ReturnFive", 132, 142),
+                    variable: Identifier::new("ReturnFive", 124, 134),
                     value: Expression::Literal(Literal::Integer(
                         IntegerLiteral {
                             value: 5,
-                            span: Span::new(146, 147),
+                            span: Span::new(138, 139),
                         },
                     )),
-                    span: Span::new(132, 147),
+                    span: Span::new(124, 139),
                 })],
-                span: Span::new(132, 148),
+                span: Span::new(124, 140),
             },
-            span: Span::new(0, 179),
+            span: Span::new(0, 171),
         };
 
         parses_to! {
@@ -1240,25 +1240,25 @@ mod tests {
             input: src,
             rule: Rule::function,
             tokens: [
-                function(0, 179, [
+                function(0, 171, [
                     identifier(9, 19),
-                    identifier(22, 29),
-                    preamble(42, 105, [
-                        var_block(42, 105, [
-                            input_var_block(42, 51),
-                            variable_decl(69, 83, [
-                                identifier(69, 74),
-                                identifier(76, 83),
+                    identifier(22, 25),
+                    preamble(38, 97, [
+                        var_block(38, 97, [
+                            input_var_block(38, 47),
+                            variable_decl(65, 75, [
+                                identifier(65, 70),
+                                identifier(72, 75),
                             ]),
                         ]),
                     ]),
-                    block(132, 148, [
-                        statement(132, 148, [
-                            assignment(132, 147, [
-                                identifier(132, 142),
-                                assign(143, 145),
-                                integer(146, 147, [
-                                    integer_decimal(146,147),
+                    block(124, 140, [
+                        statement(124, 140, [
+                            assignment(124, 139, [
+                                identifier(124, 134),
+                                assign(135, 137),
+                                integer(138, 139, [
+                                    integer_decimal(138,139),
                                 ]),
                             ]),
                         ]),
