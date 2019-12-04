@@ -226,6 +226,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "rustmatic-iec"
+version = "0.1.0"
+dependencies = [
+ "rustmatic-structured-text 0.1.0",
+]
+
+[[package]]
 name = "rustmatic-runtime"
 version = "0.1.0"
 dependencies = [
