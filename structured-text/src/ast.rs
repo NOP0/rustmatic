@@ -18,6 +18,18 @@ fn preamble(pair: Pair<'_, Rule>) -> Result<Vec<VarBlock>, ParseError> {
     pair.into_inner().map(VarBlock::from_pair).collect()
 }
 
+/// All items inside a source file.
+#[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(
+    feature = "serde-1",
+    derive(serde_derive::Serialize, serde_derive::Deserialize),
+    serde(rename_all = "kebab-case")
+)]
+pub struct File {
+    pub functions: Vec<Function>,
+    pub span: Span,
+}
+
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(
     feature = "serde-1",
@@ -1125,12 +1137,12 @@ mod tests {
 
     #[test]
     fn parse_a_program() {
-        let src = r#"PROGRAM foo 
-            VAR_GLOBAL 
-                fourty_two: INT; 
-            END_VAR 
-            
-            fourty_two := 42; 
+        let src = r#"PROGRAM foo
+            VAR_GLOBAL
+                fourty_two: INT;
+            END_VAR
+
+            fourty_two := 42;
         END_PROGRAM
         "#;
         let expected = Program {
@@ -1198,10 +1210,10 @@ mod tests {
     #[test]
     fn parse_a_function() {
         let src = r#"FUNCTION ReturnFive : INT
-            VAR_INPUT 
-                input: INT; 
-            END_VAR 
-            
+            VAR_INPUT
+                input: INT;
+            END_VAR
+
             ReturnFive := 5;
 
         END_FUNCTION

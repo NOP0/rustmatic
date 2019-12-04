@@ -1,7 +1,4 @@
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn it_works() {
-        assert_eq!(2 + 2, 4);
-    }
-}
+//! A compiler for the IEC 61131-3 family of programming languages.
+
+pub mod frontend;
+pub mod mir;
