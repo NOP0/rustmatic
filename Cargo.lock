@@ -206,6 +206,7 @@ name = "rustmatic"
 version = "0.1.0"
 dependencies = [
  "rustmatic-core 0.1.0",
+ "rustmatic-dummy-input 0.1.0",
  "rustmatic-gpio 0.1.0",
  "rustmatic-runtime 0.1.0",
 ]
@@ -216,6 +217,13 @@ version = "0.1.0"
 dependencies = [
  "anymap 0.12.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "slotmap 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "rustmatic-dummy-input"
+version = "0.1.0"
+dependencies = [
+ "rustmatic-core 0.1.0",
 ]
 
 [[package]]

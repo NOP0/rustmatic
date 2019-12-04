@@ -18,7 +18,7 @@ type Variables = DenseSlotMap<VariableIndex, Variable>;
 /// The PLC runtime.
 pub struct Runtime {
     pub(crate) devices: DeviceManager,
-    pub process_image: ProcessImage, // TODO: Public for testing in userspace. How to keep this private?
+    pub process_image: ProcessImage, /* TODO: Public for testing in userspace. How to keep this private? */
     pub(crate) processes: Processes,
     pub(crate) variables: Variables,
 }
@@ -69,10 +69,10 @@ impl Runtime {
 
             match process.poll(&ctx) {
                 Transition::Completed => to_remove.push(pid),
-                Transition::StillRunning => {}
+                Transition::StillRunning => {},
                 Transition::Fault(fault) => {
                     faults.push((pid, fault));
-                }
+                },
             }
         }
 
@@ -82,9 +82,9 @@ impl Runtime {
         faults
     }
 
-    pub fn init(&mut self) -> Result<(), Fault>{
+    pub fn init(&mut self) -> Result<(), Fault> {
         for (pid, process) in &mut self.processes {
-        // set up the device context
+            // set up the device context
             let ctx = Context {
                 devices: &self.devices,
                 process_image: &self.process_image,
@@ -105,19 +105,15 @@ pub enum Fault {}
 /// known by our [`Runtime`].
 struct Context<'a> {
     devices: &'a DeviceManager,
-    process_image : &'a ProcessImage,
+    process_image: &'a ProcessImage,
     variables: RefCell<&'a mut Variables>,
     current_process: ProcessIndex,
 }
 
 impl<'a> System for Context<'a> {
-    fn devices(&self) -> &DeviceManager {
-        self.devices
-    }
+    fn devices(&self) -> &DeviceManager { self.devices }
 
-    fn now(&self) -> Instant {
-        Instant::now()
-    }
+    fn now(&self) -> Instant { Instant::now() }
 
     fn declare_variable(
         &self,
@@ -147,9 +143,7 @@ impl<'a> System for Context<'a> {
         }
     }
 
-    fn process_image(&self) -> &ProcessImage{
-        self.process_image
-    }
+    fn process_image(&self) -> &ProcessImage { self.process_image }
 }
 
 /// A [`Variable`] is some value that can be accessed by different parts of the

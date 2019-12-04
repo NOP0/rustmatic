@@ -1,80 +1,78 @@
-use rustmatic_core::{Process, System, Transition, InputHandle};
+use rustmatic_core::{Input, Output, Process, System, Transition};
+use rustmatic_dummy_input::{DummyInput};
 use rustmatic_runtime::{Fault, Runtime};
-use rustmatic_gpio::{GpioPin};
+use std::sync::Arc;
 
-    struct PlcMain{
-        cycle_counter : i32,
-        my_bool : InputHandle<bool>,
-        my_float : InputHandle<f64>,
+struct PlcMain {
+    cycle_counter: i32,
+    my_bool: Input<bool>, // Define an process image input of type bool
+    my_float: Input<f64>, // Define an process image input of type float
+    my_dummy_input : DummyInput, // Define an dummy input
+}
+
+impl PlcMain {
+    pub fn new(runtime : &mut Runtime) -> Self {
+
+        let my_bool = runtime.process_image.register_input::<bool>(false);
+        let my_float =  runtime.process_image.register_input::<f64>(0.0);
+
+        let my_dummy_input = DummyInput::new(my_bool.get_number());
+
+      
+        PlcMain {
+            cycle_counter: 0,
+            my_bool: my_bool,
+            my_float: my_float,
+            my_dummy_input : my_dummy_input,
+        }
+        
+
+    }
+}
+
+impl Process for PlcMain {
+    type Fault = Fault;
+
+    fn init(&mut self, system: &dyn System) -> Result<(), Self::Fault> {
+
+        // Do some initializing
+        println!("PlcMain was initialized");
+
+        let devices = system.devices();
+
+        // FIXME: How to register devices, devicemanager is &
+        self.my_dummy_input.register(devices);
+        let _ = devices.register(Arc::new(self.my_dummy_input));
+
+        Ok(())
     }
 
+    fn poll(&mut self, system: &dyn System) -> Transition<Self::Fault> {
+        println!("PlcMain running!");
 
+        let pi = system.process_image(); // Get handle to ProcessImage
 
-    impl Process for PlcMain {
-        type Fault = Fault;
+        println!("{}",pi.read(self.my_bool));
 
-        fn init(&mut self,
-            system: &dyn System,
-        ) -> Result<(), Self::Fault>{
+        self.cycle_counter += 1;
 
-            // Do some initializing
-
-            println!("PlcMain was initialized");
-
-            Ok(())
-        }
-
-
-
-        fn poll(
-            &mut self,
-            system: &dyn System,
-        ) -> Transition<Self::Fault> {
-            println!("PlcMain running!");
-
-            let pi = system.process_image(); // Get handle to ProcessImage
-
-            pi.write(self.my_bool, false);
-
-            println!("my_bool is:{}", pi.read(self.my_bool));
-
-            pi.write(self.my_bool, true);
-
-            println!("my_bool is:{}", pi.read(self.my_bool));
-
-            pi.write(self.my_float, 0.0);
-
-            println!("my_float is:{}", pi.read(self.my_float));
-
-            pi.write(self.my_float, 3.14);
-
-            println!("my_float is:{}", pi.read(self.my_float));
-            
-            self.cycle_counter += 1;
-
-            if self.cycle_counter < 2 {
-                Transition::StillRunning
-            }
-            else {
-                Transition::Completed
-            }
-
+        if self.cycle_counter < 2 {
+            Transition::StillRunning
+        } else {
+            Transition::Completed
         }
     }
+}
 fn main() {
     let mut runtime = Runtime::new();
 
-    runtime.add_process( // FIXME: Ouch, there should be some cleaner way?
-        PlcMain{
-        cycle_counter: 0,
-        my_bool: runtime.process_image.register_input::<bool>(false),
-        my_float: runtime.process_image.register_input::<f64>(0.0),
-    }
-    );
+    let plc_main = PlcMain::new(&mut runtime);
+
+    runtime.add_process(plc_main);
 
     runtime.init(); // TODO: handle errors
 
     while runtime.iter_processes().count() > 0 {
-    let _ = runtime.poll();
+        let _ = runtime.poll();
     }
 }
