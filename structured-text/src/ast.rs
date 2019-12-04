@@ -589,12 +589,40 @@ pub struct FloatLiteral {
 
 impl FloatLiteral {
     fn from_pair(pair: Pair<'_, Rule>) -> Result<FloatLiteral, ParseError> {
-        ParseError::expect_rule(Rule::float, &pair)?;
+        let span = to_span(pair.as_span());
 
-        Ok(FloatLiteral {
-            value: pair.as_str().parse().unwrap(),
-            span: to_span(pair.as_span()),
-        })
+        match pair.as_rule() {
+            Rule::float => Ok(FloatLiteral {
+                value: pair.as_str().parse().unwrap(),
+                span,
+            }),
+            Rule::float_engineering => {
+                let mut items = pair.into_inner();
+                let float = FloatLiteral::from_pair(
+                    items
+                    .next()
+                    .unwrap())
+                    .unwrap()
+                    .value;
+                let exponent = IntegerLiteral::from_pair(
+                    items
+                    .next()
+                    .unwrap())
+                    .unwrap()
+                    .value as u32;
+
+                Ok(FloatLiteral {
+                    value: (float * (u32::pow(10, exponent) as f64)),
+                    span,
+                })
+            },
+            _ => {
+                return Err(ParseError::expected_one_of(
+                    &[Rule::float, Rule::float_engineering],
+                    pair.as_span(),
+                ));
+            },
+        }
     }
 }
 
@@ -974,6 +1002,15 @@ mod tests {
         let got = FloatLiteral::from_str(src).unwrap();
 
         assert_eq!(got, expected);
+    }
+
+    #[test]
+    fn parse_engineering_float() {
+        let src = "3.14e2";
+        let expected = FloatLiteral {
+            value: 314.0,
+            span: Span::new(0, 7),
+        };
     }
 
     #[test]
