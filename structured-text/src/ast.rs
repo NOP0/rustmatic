@@ -1000,10 +1000,10 @@ mod tests {
 
     #[test]
     fn parse_a_hex_integer() {
-        let src = "0xdeadbeef";
+        let src = "16#deadbeef";
         let expected = IntegerLiteral {
             value: 0xdeadbeef,
-            span: Span::new(0, 10),
+            span: Span::new(0, 11),
         };
 
         parses_to! {
@@ -1011,7 +1011,7 @@ mod tests {
             input: src,
             rule: Rule::integer,
             tokens: [
-                integer(0, 10, [integer_hexadecimal(2, 10)]),
+                integer(0, 11, [integer_hexadecimal(3, 11)]),
             ]
         }
 
