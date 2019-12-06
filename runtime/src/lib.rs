@@ -17,7 +17,7 @@ type Variables = DenseSlotMap<VariableIndex, Variable>;
 
 /// The PLC runtime.
 pub struct Runtime {
-    pub(crate) devices: DeviceManager,
+    pub devices: DeviceManager,
     pub process_image: ProcessImage, /* TODO: Public for testing in userspace. How to keep this private? */
     pub(crate) processes: Processes,
     pub(crate) variables: Variables,
@@ -58,6 +58,9 @@ impl Runtime {
 
         // TODO: Here we need to copy between devices and process image.
         // poll all registered process
+
+        self.process_image.update_inputs(&mut self.devices);
+
         for (pid, process) in &mut self.processes {
             // set up the device context
             let ctx = Context {

@@ -1,21 +1,17 @@
-use crate::{
-    Device, DeviceError, DeviceID, DeviceRegistrar, InputNumber, OutputNumber,
-};
+use crate::{Device, DeviceError, DeviceID};
 use anymap::AnyMap;
 use slotmap::DenseSlotMap;
-use std::{any::TypeId, collections::HashMap, sync::Arc};
+use std::sync::Arc;
 
 /// A collection of [`Device`]s.
 pub struct DeviceManager {
     devices: AnyMap,
-    lookup_table: LookupTable,
 }
 
 impl DeviceManager {
     pub fn new() -> Self {
         DeviceManager {
             devices: AnyMap::new(),
-            lookup_table: LookupTable::default(),
         }
     }
 
@@ -35,74 +31,63 @@ impl DeviceManager {
             .or_insert_with(Devices::<T>::default);
 
         let id = devices.0.insert(Arc::clone(&device));
-        self.lookup_table.register(id, &*device);
 
         id
     }
 
     pub fn read<T: 'static>(
         &self,
-        number: InputNumber,
+        device_id: DeviceID,
     ) -> Result<T, DeviceError> {
-        let device_id = self
-            .lookup_table
-            .find_input_device::<T>(number)
-            .ok_or(DeviceError::UnknownNumber)?;
-
         let device = self
             .of_type::<T>()
             .and_then(|devices| devices.0.get(device_id))
             .ok_or(DeviceError::UnknownNumber)?;
 
-        device.read(number)
+        device.read()
     }
 
     pub fn digital_read(
         &self,
-        index: InputNumber,
+        device_id: DeviceID,
     ) -> Result<bool, DeviceError> {
-        self.read(index)
+        self.read(device_id)
     }
 
     pub fn analogue_read(
         &self,
-        index: InputNumber,
+        device_id: DeviceID,
     ) -> Result<f32, DeviceError> {
-        self.read(index)
+        self.read(device_id)
     }
 
     pub fn write<T: 'static>(
         &self,
-        number: OutputNumber,
+        device_id: DeviceID,
         new_state: T,
     ) -> Result<(), DeviceError> {
-        let device_id = self
-            .lookup_table
-            .find_output_device::<T>(number)
-            .ok_or(DeviceError::UnknownNumber)?;
-
         let device = self
             .of_type::<T>()
             .and_then(|devices| devices.0.get(device_id))
             .ok_or(DeviceError::UnknownNumber)?;
 
-        device.write(number, new_state)
+        device.write(new_state)
     }
 
     pub fn digital_write(
         &self,
-        index: OutputNumber,
+        device_id: DeviceID,
         new_state: bool,
     ) -> Result<(), DeviceError> {
-        self.write(index, new_state)
+        self.write(device_id, new_state)
     }
 
     pub fn analogue_write(
         &self,
-        index: OutputNumber,
+        device_id: DeviceID,
         new_state: f32,
     ) -> Result<(), DeviceError> {
-        self.write(index, new_state)
+        self.write(device_id, new_state)
     }
 }
 
@@ -113,80 +98,4 @@ pub struct Devices<T>(DenseSlotMap<DeviceID, Arc<dyn Device<T>>>);
 
 impl<T> Default for Devices<T> {
     fn default() -> Devices<T> { Devices(DenseSlotMap::with_key()) }
-}
-
-/// A lookup table which lets you look the [`Device`] which can read an
-/// input (or output) based on the [`InputNumber`] and type being read/written
-/// (via [`TypeId`]).
-#[derive(Debug, Default, Clone, PartialEq)]
-struct LookupTable {
-    // FIXME: Do we actually care about TypeId here? Or could we just record
-    // the input/output number and then let the lookup into `Devices`
-    // error out?
-    inputs: HashMap<(InputNumber, TypeId), DeviceID>,
-    outputs: HashMap<(OutputNumber, TypeId), DeviceID>,
-}
-
-impl LookupTable {
-    fn find_input_device<T: 'static>(
-        &self,
-        number: InputNumber,
-    ) -> Option<DeviceID> {
-        let key = (number, TypeId::of::<T>());
-        self.inputs.get(&key).copied()
-    }
-
-    fn find_output_device<T: 'static>(
-        &self,
-        number: OutputNumber,
-    ) -> Option<DeviceID> {
-        let key = (number, TypeId::of::<T>());
-        self.outputs.get(&key).copied()
-    }
-
-    /// Updates the internal bookkeeping used to track which inputs/outputs a
-    /// particular [`Device`] can read from or write to.
-    fn register<D, T>(&mut self, id: DeviceID, device: &D)
-    where
-        D: Device<T> + ?Sized,
-        T: 'static,
-    {
-        self.forget_device(id);
-
-        let mut registrar = Registrar {
-            id,
-            type_id: TypeId::of::<T>(),
-            lookup_table: self,
-        };
-        device.register(&mut registrar);
-    }
-
-    fn forget_device(&mut self, id: DeviceID) {
-        // FIXME: Looping over every known input and output seems a bit
-        // expensive...
-        self.inputs.retain(|_key, device_id| *device_id != id);
-        self.outputs.retain(|_key, device_id| *device_id != id);
-    }
-}
-
-/// A temporary struct used so we can remember the [`DeviceID`] and [`TypeId`]
-/// when registering inputs and outputs. Essentially a fancy closure.
-struct Registrar<'a> {
-    id: DeviceID,
-    type_id: TypeId,
-    lookup_table: &'a mut LookupTable,
-}
-
-impl<'a> DeviceRegistrar for Registrar<'a> {
-    fn input(&mut self, number: InputNumber) {
-        self.lookup_table
-            .inputs
-            .insert((number, self.type_id), self.id);
-    }
-
-    fn output(&mut self, number: OutputNumber) {
-        self.lookup_table
-            .outputs
-            .insert((number, self.type_id), self.id);
-    }
 }

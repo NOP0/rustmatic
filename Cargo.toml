@@ -10,7 +10,7 @@ license = "MIT OR Apache-2.0"
 [dependencies]
 rustmatic-core = {path = "./core"}
 rustmatic-runtime = { path = "./runtime" }
-rustmatic-gpio = { path = "./gpio" }
+# rustmatic-gpio = { path = "./gpio" }
 rustmatic-dummy-input = { path = "./dummy-input" }
 
 [workspace]

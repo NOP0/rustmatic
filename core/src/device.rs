@@ -1,4 +1,3 @@
-use crate::{InputNumber, OutputNumber};
 use std::{
     error::Error,
     fmt::{self, Display, Formatter},
@@ -13,25 +12,18 @@ use std::{
 /// The [`Device`] should print a concise human-readable description using
 /// [`Display`].
 pub trait Device<T>: Display {
-    /// Notify the caller which inputs and outputs are supported.
-    fn register(&self, registrar: &mut dyn DeviceRegistrar);
+    fn read(&self) -> Result<T, DeviceError>;
 
-    fn read(&self, number: InputNumber) -> Result<T, DeviceError>;
-
-    fn write(
-        &self,
-        number: OutputNumber,
-        new_state: T,
-    ) -> Result<(), DeviceError>;
+    fn write(&self, new_state: T) -> Result<(), DeviceError>;
 }
 
 /// The thing passed to a [`Device`] when registering a device with
 /// [`Device::register()`].
 pub trait DeviceRegistrar {
     /// Marks a particular input as readable.
-    fn input(&mut self, number: InputNumber);
+    fn input(&mut self);
     /// Marks a particular output as writeable.
-    fn output(&mut self, number: OutputNumber);
+    fn output(&mut self);
 }
 
 #[derive(Debug)]

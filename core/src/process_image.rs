@@ -1,14 +1,20 @@
-use crate::{InputNumber, OutputNumber};
+use crate::{DeviceID, DeviceManager, InputNumber, OutputNumber};
+
 use anymap::AnyMap;
-use slotmap::DenseSlotMap;
+use slotmap::{DenseSlotMap, SecondaryMap};
 use std::{cell::RefCell, marker::PhantomData};
 
 // TODO: InputChannels and Outputchannels are very similar. Should "Channels" be
 // generic?
 pub struct InputChannels<T>(DenseSlotMap<InputNumber, T>);
+pub struct InputDevices(SecondaryMap<InputNumber, DeviceID>);
 
 impl<T> Default for InputChannels<T> {
     fn default() -> InputChannels<T> { InputChannels(DenseSlotMap::with_key()) }
+}
+
+impl Default for InputDevices {
+    fn default() -> InputDevices { InputDevices(SecondaryMap::new()) }
 }
 
 pub struct OutputChannels<T>(DenseSlotMap<OutputNumber, T>);
@@ -22,6 +28,7 @@ impl<T> Default for OutputChannels<T> {
 pub struct ProcessImage {
     input_channels: RefCell<AnyMap>,
     output_channels: RefCell<AnyMap>,
+    input_devices: InputDevices,
 }
 
 /// Handle to an input in the [ProcessImage]
@@ -31,10 +38,8 @@ pub struct Input<T> {
     of_type: PhantomData<T>,
 }
 
-impl <T>Input<T> {
-    pub fn get_number(self) -> InputNumber {
-        self.input_number
-    }
+impl<T> Input<T> {
+    pub fn get_number(self) -> InputNumber { self.input_number }
 }
 
 /// Handle to an output in the [ProcessImage]
@@ -48,6 +53,7 @@ impl ProcessImage {
         ProcessImage {
             input_channels: RefCell::new(AnyMap::new()),
             output_channels: RefCell::new(AnyMap::new()),
+            input_devices: InputDevices::default(),
         }
     }
 
@@ -91,5 +97,28 @@ impl ProcessImage {
                 });
 
         *value.unwrap() = state;
+    }
+
+    pub fn register_input_device<T>(
+        &mut self,
+        input: Input<T>,
+        device: DeviceID,
+    ) {
+        self.input_devices.0.insert(input.input_number, device);
+    }
+
+    pub fn update_inputs(&mut self, devices: &DeviceManager) {
+        for key in self.input_devices.0.keys() {
+            let device_id = self.input_devices.0[key];
+
+            let state = devices.read(device_id).unwrap();
+
+            let input = Input::<bool> {
+                input_number: key,
+                of_type: PhantomData,
+            };
+
+            self.write(input, state);
+        }
     }
 }
