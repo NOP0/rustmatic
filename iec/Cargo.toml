@@ -1,0 +1,14 @@
+[package]
+name = "rustmatic-iec"
+version = "0.1.0"
+authors = ["Michael Bryan <michaelfbryan@gmail.com>"]
+edition = "2018"
+description = "An IEC 61131-3 compiler for the rustmatic runtime."
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+rustmatic-structured-text = { path = "../structured-text" }
+specs = "0.15.1"
+specs-derive = "0.4.0"
+codespan = "0.5.0"

@@ -11,4 +11,4 @@ license = "MIT OR Apache-2.0"
 slotmap = "0.4.0"
 
 [workspace]
-members = ["core", "runtime", "gpio", "structured-text"]
+members = ["core", "runtime", "gpio", "structured-text", "iec", "iec-std"]
