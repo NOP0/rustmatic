@@ -1,124 +1,135 @@
-use crate::{DeviceID, DeviceManager, InputNumber, OutputNumber};
+use crate::{DeviceID, DeviceManager};
 
-use anymap::AnyMap;
-use slotmap::{DenseSlotMap, SecondaryMap};
-use std::{cell::RefCell, marker::PhantomData};
+use std::convert::TryFrom;
 
-// TODO: InputChannels and Outputchannels are very similar. Should "Channels" be
-// generic?
-pub struct InputChannels<T>(DenseSlotMap<InputNumber, T>);
-pub struct InputDevices(SecondaryMap<InputNumber, DeviceID>);
+const PI_LENGTH: usize = 128;
 
-impl<T> Default for InputChannels<T> {
-    fn default() -> InputChannels<T> { InputChannels(DenseSlotMap::with_key()) }
+#[derive(Clone, Copy)]
+pub struct Address {
+    pub byte_offset: usize,
+    pub bit_offset: usize,
+    pub type_of: AccessType,
 }
 
-impl Default for InputDevices {
-    fn default() -> InputDevices { InputDevices(SecondaryMap::new()) }
-}
-
-pub struct OutputChannels<T>(DenseSlotMap<OutputNumber, T>);
-
-impl<T> Default for OutputChannels<T> {
-    fn default() -> OutputChannels<T> {
-        OutputChannels(DenseSlotMap::with_key())
-    }
+#[derive(Clone, Copy, Debug)]
+pub enum AccessType {
+    Bit,
+    Byte,
+    Word,
+    DoubleWord,
 }
 
 pub struct ProcessImage {
-    input_channels: RefCell<AnyMap>,
-    output_channels: RefCell<AnyMap>,
-    input_devices: InputDevices,
-}
-
-/// Handle to an input in the [ProcessImage]
-#[derive(Copy, Clone)]
-pub struct Input<T> {
-    input_number: InputNumber,
-    of_type: PhantomData<T>,
-}
-
-impl<T> Input<T> {
-    pub fn get_number(self) -> InputNumber { self.input_number }
-}
-
-/// Handle to an output in the [ProcessImage]
-pub struct Output<T> {
-    input_number: OutputNumber,
-    of_type: PhantomData<T>,
+    pub image: [u8; PI_LENGTH],
+    pub devices: Vec<(DeviceID, Address)>,
 }
 
 impl ProcessImage {
     pub fn new() -> Self {
         ProcessImage {
-            input_channels: RefCell::new(AnyMap::new()),
-            output_channels: RefCell::new(AnyMap::new()),
-            input_devices: InputDevices::default(),
+            image: [0; PI_LENGTH],
+            devices: Vec::new(),
         }
     }
 
-    pub fn register_input<T: 'static>(&self, input: T) -> Input<T> {
-        let mut channels = self.input_channels.borrow_mut();
-
-        let id = channels
-            .entry::<InputChannels<T>>()
-            .or_insert_with(InputChannels::<T>::default)
-            .0
-            .insert(input);
-
-        Input {
-            input_number: id,
-            of_type: PhantomData,
-        }
+    pub fn read_bit(&self, address: Address) -> bool {
+        let byte = self.image[address.byte_offset];
+        let mask = 1 << address.bit_offset;
+        (byte & mask) != 0
     }
 
-    pub fn read<T: 'static + Copy>(&self, input: Input<T>) -> T {
-        // Get handle to slotmap of correct type
-        let channels = self.input_channels.borrow_mut();
-
-        let value =
-            channels
-                .get::<InputChannels<T>>()
-                .and_then(|input_channels| {
-                    input_channels.0.get(input.input_number)
-                });
-
-        *value.unwrap()
+    pub fn read_byte(&self, address: Address) -> u8 {
+        self.image[address.byte_offset]
     }
 
-    pub fn write<T: 'static + Copy>(&self, input: Input<T>, state: T) {
-        let mut channels = self.input_channels.borrow_mut();
-
-        let value =
-            channels
-                .get_mut::<InputChannels<T>>()
-                .and_then(|input_channels| {
-                    input_channels.0.get_mut(input.input_number)
-                });
-
-        *value.unwrap() = state;
+    pub fn read_word(&self, address: Address) -> u16 {
+        u16::from_le_bytes(
+            <[u8; 2]>::try_from(
+                &self.image[address.byte_offset..address.byte_offset + 2],
+            )
+            .unwrap(),
+        )
     }
 
-    pub fn register_input_device<T>(
+    pub fn read_double_word(&self, address: Address) -> u32 {
+        u32::from_le_bytes(
+            <[u8; 4]>::try_from(
+                &self.image[address.byte_offset..address.byte_offset + 4],
+            )
+            .unwrap(),
+        )
+    }
+
+    pub fn write_bit(&mut self, address: Address, state: bool) {
+        let mut byte = self.image[address.byte_offset];
+        let mask: u8 = if state { 1 } else { 0 };
+        byte =
+            (byte & !(1 << address.bit_offset)) | (mask << address.bit_offset);
+        self.image[address.byte_offset] = byte;
+    }
+
+    pub fn write_byte(&mut self, address: Address, state: u8) {
+        self.image[address.byte_offset] = state;
+    }
+
+    pub fn write_word(&mut self, address: Address, state: u16) {
+        let bytes: [u8; 2] = u16::to_le_bytes(state);
+        self.image[address.byte_offset] = bytes[0];
+        self.image[address.byte_offset + 1] = bytes[1];
+    }
+
+    pub fn write_double_word(&mut self, address: Address, state: u32) {
+        let bytes: [u8; 4] = u32::to_le_bytes(state);
+        self.image[address.byte_offset] = bytes[0];
+        self.image[address.byte_offset + 1] = bytes[1];
+        self.image[address.byte_offset + 2] = bytes[2];
+        self.image[address.byte_offset + 3] = bytes[3];
+    }
+
+    pub fn register_input_device(
         &mut self,
-        input: Input<T>,
+        byte_offset: usize,
+        bit_offset: usize,
+        type_of: AccessType,
         device: DeviceID,
     ) {
-        self.input_devices.0.insert(input.input_number, device);
+        self.devices.push((
+            device,
+            Address {
+                byte_offset,
+                bit_offset,
+                type_of,
+            },
+        ));
     }
 
     pub fn update_inputs(&mut self, devices: &DeviceManager) {
-        for key in self.input_devices.0.keys() {
-            let device_id = self.input_devices.0[key];
+        let mut devices_vec: Vec<(DeviceID, Address)> = self.devices.clone();
 
-            let state = devices.read(device_id).unwrap();
+        for (key, value) in self.devices.iter() {
+            devices_vec.push((*key, *value))
+        }
 
-            let input = Input::<bool> {
-                input_number: key,
-                of_type: PhantomData,
-            };
-
-            self.write(input, state);
+        for device in devices_vec {
+            match device.1.type_of {
+                AccessType::Bit => self.write_bit(
+                    device.1,
+                    devices.read::<bool>(device.0).unwrap(),
+                ),
+                AccessType::Byte => self.write_byte(
+                    device.1,
+                    devices.read::<u8>(device.0).unwrap(),
+                ),
+                AccessType::Word => self.write_word(
+                    device.1,
+                    devices.read::<u16>(device.0).unwrap(),
+                ),
+                AccessType::DoubleWord => self.write_double_word(
+                    device.1,
+                    devices.read::<u32>(device.0).unwrap(),
+                ),
+                _ => {},
+            }
         }
     }
 }

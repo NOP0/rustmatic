@@ -7,7 +7,7 @@ mod process_image;
 pub use crate::{
     device::{Device, DeviceError, DeviceRegistrar},
     device_manager::{DeviceManager, Devices},
-    process_image::{Input, Output, ProcessImage},
+    process_image::{AccessType, Address, ProcessImage},
 };
 
 use std::time::Instant;
@@ -35,7 +35,8 @@ pub trait System {
     /// Give a variable a new value.
     fn set_variable(&self, index: VariableIndex, new_value: Value);
 
-    fn process_image(&self) -> &ProcessImage;
+    fn inputs(&self) -> &ProcessImage;
+    fn outputs(&self) -> &ProcessImage;
 }
 
 slotmap::new_key_type! {

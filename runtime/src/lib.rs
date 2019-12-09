@@ -18,7 +18,8 @@ type Variables = DenseSlotMap<VariableIndex, Variable>;
 /// The PLC runtime.
 pub struct Runtime {
     pub devices: DeviceManager,
-    pub process_image: ProcessImage, /* TODO: Public for testing in userspace. How to keep this private? */
+    pub inputs: ProcessImage,
+    pub outputs: ProcessImage,
     pub(crate) processes: Processes,
     pub(crate) variables: Variables,
 }
@@ -28,7 +29,8 @@ impl Runtime {
     pub fn new() -> Self {
         Runtime {
             devices: DeviceManager::new(),
-            process_image: ProcessImage::new(),
+            inputs: ProcessImage::new(),
+            outputs: ProcessImage::new(),
             processes: Processes::with_key(),
             variables: Variables::with_key(),
         }
@@ -56,16 +58,14 @@ impl Runtime {
         let mut to_remove = Vec::new();
         let mut faults = Vec::new();
 
-        // TODO: Here we need to copy between devices and process image.
-        // poll all registered process
-
-        self.process_image.update_inputs(&mut self.devices);
+        self.inputs.update_inputs(&mut self.devices);
 
         for (pid, process) in &mut self.processes {
             // set up the device context
             let ctx = Context {
                 devices: &self.devices,
-                process_image: &self.process_image,
+                inputs: &self.inputs,
+                outputs: &self.outputs,
                 current_process: pid,
                 variables: RefCell::new(&mut self.variables),
             };
@@ -90,11 +90,12 @@ impl Runtime {
             // set up the device context
             let ctx = Context {
                 devices: &self.devices,
-                process_image: &self.process_image,
+                inputs: &self.inputs,
+                outputs: &self.outputs,
                 current_process: pid,
                 variables: RefCell::new(&mut self.variables),
             };
-            process.init(&ctx); // TODO handle errors
+            process.init(&ctx)?;
         }
         Ok(())
     }
@@ -108,7 +109,8 @@ pub enum Fault {}
 /// known by our [`Runtime`].
 struct Context<'a> {
     devices: &'a DeviceManager,
-    process_image: &'a ProcessImage,
+    inputs: &'a ProcessImage,
+    outputs: &'a ProcessImage,
     variables: RefCell<&'a mut Variables>,
     current_process: ProcessIndex,
 }
@@ -146,7 +148,9 @@ impl<'a> System for Context<'a> {
         }
     }
 
-    fn process_image(&self) -> &ProcessImage { self.process_image }
+    fn inputs(&self) -> &ProcessImage { self.inputs}
+
+    fn outputs(&self) -> &ProcessImage { self.outputs }
 }
 
 /// A [`Variable`] is some value that can be accessed by different parts of the
