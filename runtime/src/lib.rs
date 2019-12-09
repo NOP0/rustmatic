@@ -148,9 +148,9 @@ impl<'a> System for Context<'a> {
         }
     }
 
-    fn inputs(&mut self) -> &mut ProcessImage { self.inputs}
+    fn inputs(&mut self) -> &mut ProcessImage { self.inputs }
 
-    fn outputs(&mut self) -> &mut ProcessImage {self.outputs }
+    fn outputs(&mut self) -> &mut ProcessImage { self.outputs }
 }
 
 /// A [`Variable`] is some value that can be accessed by different parts of the

@@ -5,8 +5,8 @@ const PI_LENGTH: usize = 128;
 
 #[derive(Clone, Copy)]
 pub struct Address {
-    pub byte_offset: usize,
-    pub bit_offset: usize,
+    pub byte: usize,
+    pub bit: usize,
     pub type_of: AccessType,
 }
 
@@ -31,60 +31,50 @@ impl ProcessImage {
         }
     }
 
-    pub fn read_bit(&self, address: Address) -> bool {
-
-        let byte = self.image[address.byte_offset];
-        let mask = 1 << address.bit_offset;
-        (byte & mask) != 0
+    pub fn read_bit(&self, byte: usize, bit: usize) -> bool {
+        let byte_prev = self.image[byte];
+        let mask = 1 << bit;
+        (byte_prev & mask) != 0
     }
 
-    pub fn read_byte(&self, address: Address) -> u8 {
-        self.image[address.byte_offset]
+    pub fn read_byte(&self, byte: usize) -> u8 { self.image[byte] }
+
+    pub fn read_word(&self, word: usize) -> u16 {
+        LittleEndian::read_u16(&self.image[word..word + 2])
     }
 
-    pub fn read_word(&self, address: Address) -> u16 {
-        LittleEndian::read_u16(&self.image[address.byte_offset..address.byte_offset+4])
+    pub fn read_double_word(&self, dword: usize) -> u32 {
+        LittleEndian::read_u32(&self.image[dword..dword + 4])
     }
 
-    pub fn read_double_word(&self, address: Address) -> u32 {
-        LittleEndian::read_u32(&self.image[address.byte_offset..address.byte_offset+4])
-    }
-
-    pub fn write_bit(&mut self, address: Address, state: bool) {
+    pub fn write_bit(&mut self, byte: usize, bit: usize, state: bool) {
         if state {
-            self.image[address.byte_offset] |= 1 << address.bit_offset;
-          } else {
-            self.image[address.byte_offset] &= !(1 << address.bit_offset);
-          }
+            self.image[byte] |= 1 << bit;
+        } else {
+            self.image[byte] &= !(1 << bit);
+        }
     }
 
-    pub fn write_byte(&mut self, address: Address, state: u8) {
-        self.image[address.byte_offset] = state;
+    pub fn write_byte(&mut self, byte: usize, state: u8) {
+        self.image[byte] = state;
     }
 
-    pub fn write_word(&mut self, address: Address, state: u16) {
-        LittleEndian::write_u16(&mut self.image[address.byte_offset..address.byte_offset+2], state);
+    pub fn write_word(&mut self, word: usize, state: u16) {
+        LittleEndian::write_u16(&mut self.image[word..word + 2], state);
     }
 
-    pub fn write_double_word(&mut self, address: Address, state: u32) {
-        LittleEndian::write_u32(&mut self.image[address.byte_offset..address.byte_offset+4], state);
+    pub fn write_double_word(&mut self, dword: usize, state: u32) {
+        LittleEndian::write_u32(&mut self.image[dword..dword + 4], state);
     }
 
     pub fn register_input_device(
         &mut self,
-        byte_offset: usize,
-        bit_offset: usize,
+        byte: usize,
+        bit: usize,
         type_of: AccessType,
         device: DeviceID,
     ) {
-        self.devices.push((
-            device,
-            Address {
-                byte_offset,
-                bit_offset,
-                type_of,
-            },
-        ));
+        self.devices.push((device, Address { byte, bit, type_of }));
     }
 
     pub fn update_inputs(&mut self, devices: &DeviceManager) {
@@ -93,22 +83,22 @@ impl ProcessImage {
         for device in devices_vec {
             match device.1.type_of {
                 AccessType::Bit => self.write_bit(
-                    device.1,
+                    device.1.byte,
+                    device.1.bit,
                     devices.read::<bool>(device.0).unwrap(),
                 ),
                 AccessType::Byte => self.write_byte(
-                    device.1,
+                    device.1.byte,
                     devices.read::<u8>(device.0).unwrap(),
                 ),
                 AccessType::Word => self.write_word(
-                    device.1,
+                    device.1.byte,
                     devices.read::<u16>(device.0).unwrap(),
                 ),
                 AccessType::DoubleWord => self.write_double_word(
-                    device.1,
+                    device.1.byte,
                     devices.read::<u32>(device.0).unwrap(),
                 ),
-                _ => {},
             }
         }
     }

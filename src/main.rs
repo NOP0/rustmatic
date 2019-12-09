@@ -1,18 +1,17 @@
-use rustmatic_core::{AccessType, Address, Process, System, Transition};
+use rustmatic_core::{AccessType, Process, System, Transition};
 use rustmatic_dummy_input::{DummyBool, DummyU32};
 use rustmatic_runtime::{Fault, Runtime};
 use std::sync::Arc;
 
 struct PlcMain {
     cycle_counter: u64,
-    my_bool_1: bool, 
-    my_int_2: u32,   
-    my_int_3: u32,  
+    my_bool_1: bool,
+    my_int_2: u32,
+    my_int_3: u32,
 }
 
 impl PlcMain {
     pub fn new(runtime: &mut Runtime) -> Self {
-
         // Register first input
         let my_input_1 = DummyBool::new();
         runtime.inputs.register_input_device(
@@ -52,7 +51,7 @@ impl PlcMain {
 impl Process for PlcMain {
     type Fault = Fault;
 
-    fn init(&mut self, system: &mut dyn System) -> Result<(), Self::Fault> {
+    fn init(&mut self, _system: &mut dyn System) -> Result<(), Self::Fault> {
         // Do some initializing
         println!("PlcMain was initialized");
         Ok(())
@@ -61,30 +60,25 @@ impl Process for PlcMain {
     fn poll(&mut self, system: &mut dyn System) -> Transition<Self::Fault> {
         println!("PlcMain running!");
 
-        let inputs = system.inputs(); // Get handle to ProcessImage Inputs
+        // Read all inputs
+        {
+            let inputs = system.inputs(); // Get handle to ProcessImage Inputs
 
-        self.my_bool_1 = inputs.read_bit(Address {
-            byte_offset: 4,
-            bit_offset: 0,
-            type_of: AccessType::Bit,
-        });
+            self.my_bool_1 = inputs.read_bit(4, 0);
+            self.my_int_2 = inputs.read_double_word(8);
+            self.my_int_3 = inputs.read_double_word(12);
+        }
 
-        self.my_int_2 = inputs.read_double_word(Address {
-            byte_offset: 8,
-            bit_offset: 0,
-            type_of: AccessType::DoubleWord,
-        });
+        // Do something with them.
+        println!("The value of my_bool_1 is: {}", self.my_bool_1);
+        println!("The value of my_int_2 is: {}", self.my_int_2);
+        println!("The value of my_int_3 is: {}", self.my_int_3);
 
-        self.my_int_3 = inputs.read_double_word(Address {
-            byte_offset: 12,
-            bit_offset: 0,
-            type_of: AccessType::DoubleWord,
-        });
+        // Write all outputs
+        let outputs = system.outputs(); // Get handle to ProcessImage Inputs
+        outputs.write_double_word(16, self.my_int_2 + self.my_int_3); // Write to outputs
 
-
-        println!("The value of my_bool is: {}", self.my_bool_1);
-        println!("The value of my_int is: {}", self.my_int_2);
-        println!("The value of my_int is: {}", self.my_int_3);
+        println!("The value of output is: {}", outputs.read_double_word(16));
 
         self.cycle_counter += 1;
 
@@ -104,7 +98,7 @@ fn main() {
 
     runtime.add_process(plc_main);
 
-    runtime.init();
+    runtime.init().expect("Could not init runtime");
 
     while runtime.iter_processes().count() > 0 {
         let _ = runtime.poll();

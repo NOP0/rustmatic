@@ -29,7 +29,7 @@ impl Device<bool> for DummyBool {
         }
     }
 
-    fn write(&self, new_state: bool) -> Result<(), DeviceError> {
+    fn write(&self, _new_state: bool) -> Result<(), DeviceError> {
         unimplemented! {}
     }
 }
@@ -65,7 +65,7 @@ impl Device<u32> for DummyU32 {
         }
     }
 
-    fn write(&self, new_state: u32) -> Result<(), DeviceError> {
+    fn write(&self, __new_state: u32) -> Result<(), DeviceError> {
         unimplemented! {}
     }
 }
