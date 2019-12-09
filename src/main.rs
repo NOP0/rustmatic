@@ -52,13 +52,13 @@ impl PlcMain {
 impl Process for PlcMain {
     type Fault = Fault;
 
-    fn init(&mut self, system: &dyn System) -> Result<(), Self::Fault> {
+    fn init(&mut self, system: &mut dyn System) -> Result<(), Self::Fault> {
         // Do some initializing
         println!("PlcMain was initialized");
         Ok(())
     }
 
-    fn poll(&mut self, system: &dyn System) -> Transition<Self::Fault> {
+    fn poll(&mut self, system: &mut dyn System) -> Transition<Self::Fault> {
         println!("PlcMain running!");
 
         let inputs = system.inputs(); // Get handle to ProcessImage Inputs

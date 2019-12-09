@@ -57,9 +57,9 @@ slotmap::new_key_type! {
 pub trait Process {
     type Fault;
 
-    fn poll(&mut self, system: &dyn System) -> Transition<Self::Fault>;
+    fn poll(&mut self, system: &mut dyn System) -> Transition<Self::Fault>;
 
-    fn init(&mut self, system: &dyn System) -> Result<(), Self::Fault>;
+    fn init(&mut self, system: &mut dyn System) -> Result<(), Self::Fault>;
 }
 
 /// What should we do after polling a [`Process`]?

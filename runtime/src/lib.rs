@@ -62,7 +62,7 @@ impl Runtime {
 
         for (pid, process) in &mut self.processes {
             // set up the device context
-            let ctx = Context {
+            let mut ctx = Context {
                 devices: &self.devices,
                 inputs: &self.inputs,
                 outputs: &self.outputs,
@@ -70,7 +70,7 @@ impl Runtime {
                 variables: RefCell::new(&mut self.variables),
             };
 
-            match process.poll(&ctx) {
+            match process.poll(&mut ctx) {
                 Transition::Completed => to_remove.push(pid),
                 Transition::StillRunning => {},
                 Transition::Fault(fault) => {
@@ -88,14 +88,14 @@ impl Runtime {
     pub fn init(&mut self) -> Result<(), Fault> {
         for (pid, process) in &mut self.processes {
             // set up the device context
-            let ctx = Context {
+            let mut ctx = Context {
                 devices: &self.devices,
                 inputs: &self.inputs,
                 outputs: &self.outputs,
                 current_process: pid,
                 variables: RefCell::new(&mut self.variables),
             };
-            process.init(&ctx)?;
+            process.init(&mut ctx)?;
         }
         Ok(())
     }
