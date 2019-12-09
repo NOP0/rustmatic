@@ -11,3 +11,5 @@ description = "Core abstractions and datatypes used by the rustmatic PLC environ
 [dependencies]
 slotmap = "0.4.0"
 anymap = "0.12.1"
+byteorder = "1.3.2"
+

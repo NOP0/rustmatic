@@ -1,6 +1,5 @@
 use crate::{DeviceID, DeviceManager};
-
-use std::convert::TryFrom;
+use byteorder::{ByteOrder, LittleEndian};
 
 const PI_LENGTH: usize = 128;
 
@@ -33,6 +32,7 @@ impl ProcessImage {
     }
 
     pub fn read_bit(&self, address: Address) -> bool {
+
         let byte = self.image[address.byte_offset];
         let mask = 1 << address.bit_offset;
         (byte & mask) != 0
@@ -43,21 +43,11 @@ impl ProcessImage {
     }
 
     pub fn read_word(&self, address: Address) -> u16 {
-        u16::from_le_bytes(
-            <[u8; 2]>::try_from(
-                &self.image[address.byte_offset..address.byte_offset + 2],
-            )
-            .unwrap(),
-        )
+        LittleEndian::read_u16(&self.image[address.byte_offset..address.byte_offset+4])
     }
 
     pub fn read_double_word(&self, address: Address) -> u32 {
-        u32::from_le_bytes(
-            <[u8; 4]>::try_from(
-                &self.image[address.byte_offset..address.byte_offset + 4],
-            )
-            .unwrap(),
-        )
+        LittleEndian::read_u32(&self.image[address.byte_offset..address.byte_offset+4])
     }
 
     pub fn write_bit(&mut self, address: Address, state: bool) {
@@ -73,17 +63,11 @@ impl ProcessImage {
     }
 
     pub fn write_word(&mut self, address: Address, state: u16) {
-        let bytes: [u8; 2] = u16::to_le_bytes(state);
-        self.image[address.byte_offset] = bytes[0];
-        self.image[address.byte_offset + 1] = bytes[1];
+        LittleEndian::write_u16(&mut self.image[address.byte_offset..address.byte_offset+2], state);
     }
 
     pub fn write_double_word(&mut self, address: Address, state: u32) {
-        let bytes: [u8; 4] = u32::to_le_bytes(state);
-        self.image[address.byte_offset] = bytes[0];
-        self.image[address.byte_offset + 1] = bytes[1];
-        self.image[address.byte_offset + 2] = bytes[2];
-        self.image[address.byte_offset + 3] = bytes[3];
+        LittleEndian::write_u32(&mut self.image[address.byte_offset..address.byte_offset+4], state);
     }
 
     pub fn register_input_device(
