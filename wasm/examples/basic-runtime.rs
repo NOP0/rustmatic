@@ -1,16 +1,18 @@
-use rustmatic_wasm::Program;
-use std::{env, error::Error};
+use rustmatic_wasm::{InMemory, Program};
+use std::env;
 
-fn main() -> Result<(), Box<dyn Error>> {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     let wasm_file = match env::args().skip(1).next() {
         Some(filename) => filename,
         None => panic!("Usage: basic-runtime <wasm-file>"),
     };
 
+    let mut env = InMemory::default();
+
     let wasm = std::fs::read(&wasm_file)?;
     let mut program = Program::load(&wasm)?;
 
     loop {
-        program.poll()?;
+        program.poll(&mut env)?;
     }
 }
