@@ -17,15 +17,6 @@ pub trait Device<T>: Display {
     fn write(&self, new_state: T) -> Result<(), DeviceError>;
 }
 
-/// The thing passed to a [`Device`] when registering a device with
-/// [`Device::register()`].
-pub trait DeviceRegistrar {
-    /// Marks a particular input as readable.
-    fn input(&mut self);
-    /// Marks a particular output as writeable.
-    fn output(&mut self);
-}
-
 #[derive(Debug)]
 pub enum DeviceError {
     UnknownNumber,
