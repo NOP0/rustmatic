@@ -51,11 +51,11 @@ impl ProcessImage {
     }
 
     pub fn write_bit(&mut self, address: Address, state: bool) {
-        let mut byte = self.image[address.byte_offset];
-        let mask: u8 = if state { 1 } else { 0 };
-        byte =
-            (byte & !(1 << address.bit_offset)) | (mask << address.bit_offset);
-        self.image[address.byte_offset] = byte;
+        if state {
+            self.image[address.byte_offset] |= 1 << address.bit_offset;
+          } else {
+            self.image[address.byte_offset] &= !(1 << address.bit_offset);
+          }
     }
 
     pub fn write_byte(&mut self, address: Address, state: u8) {
@@ -88,11 +88,7 @@ impl ProcessImage {
     }
 
     pub fn update_inputs(&mut self, devices: &DeviceManager) {
-        let mut devices_vec: Vec<(DeviceID, Address)> = self.devices.clone();
-
-        for (key, value) in self.devices.iter() {
-            devices_vec.push((*key, *value))
-        }
+        let devices_vec: Vec<(DeviceID, Address)> = self.devices.clone();
 
         for device in devices_vec {
             match device.1.type_of {
