@@ -64,8 +64,8 @@ impl Runtime {
             // set up the device context
             let mut ctx = Context {
                 devices: &self.devices,
-                inputs: &self.inputs,
-                outputs: &self.outputs,
+                inputs: &mut self.inputs,
+                outputs: &mut self.outputs,
                 current_process: pid,
                 variables: RefCell::new(&mut self.variables),
             };
@@ -90,8 +90,8 @@ impl Runtime {
             // set up the device context
             let mut ctx = Context {
                 devices: &self.devices,
-                inputs: &self.inputs,
-                outputs: &self.outputs,
+                inputs: &mut self.inputs,
+                outputs: &mut self.outputs,
                 current_process: pid,
                 variables: RefCell::new(&mut self.variables),
             };
@@ -109,8 +109,8 @@ pub enum Fault {}
 /// known by our [`Runtime`].
 struct Context<'a> {
     devices: &'a DeviceManager,
-    inputs: &'a ProcessImage,
-    outputs: &'a ProcessImage,
+    inputs: &'a mut ProcessImage,
+    outputs: &'a mut ProcessImage,
     variables: RefCell<&'a mut Variables>,
     current_process: ProcessIndex,
 }
@@ -148,9 +148,9 @@ impl<'a> System for Context<'a> {
         }
     }
 
-    fn inputs(&self) -> &ProcessImage { self.inputs}
+    fn inputs(&mut self) -> &mut ProcessImage { self.inputs}
 
-    fn outputs(&self) -> &ProcessImage { self.outputs }
+    fn outputs(&mut self) -> &mut ProcessImage {self.outputs }
 }
 
 /// A [`Variable`] is some value that can be accessed by different parts of the

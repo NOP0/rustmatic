@@ -35,8 +35,8 @@ pub trait System {
     /// Give a variable a new value.
     fn set_variable(&self, index: VariableIndex, new_value: Value);
 
-    fn inputs(&self) -> &ProcessImage;
-    fn outputs(&self) -> &ProcessImage;
+    fn inputs(&mut self) -> &mut ProcessImage;
+    fn outputs(&mut self) -> &mut ProcessImage;
 }
 
 slotmap::new_key_type! {
