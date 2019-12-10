@@ -1,6 +1,7 @@
 use log::{Level, Record};
 use std::{
     collections::HashMap,
+    convert::{TryFrom, TryInto},
     panic,
     panic::AssertUnwindSafe,
     ptr,
@@ -77,6 +78,50 @@ impl Value {
             Value::Float(_) => Type::Float,
         }
     }
+}
+
+impl TryFrom<Value> for bool {
+    type Error = Error;
+
+    fn try_from(other: Value) -> Result<bool, Self::Error> {
+        match other {
+            Value::Bool(b) => Ok(b),
+            _ => Err(Error::BadVariableType),
+        }
+    }
+}
+
+impl TryFrom<Value> for i32 {
+    type Error = Error;
+
+    fn try_from(other: Value) -> Result<i32, Self::Error> {
+        match other {
+            Value::Integer(i) => Ok(i),
+            _ => Err(Error::BadVariableType),
+        }
+    }
+}
+
+impl TryFrom<Value> for f64 {
+    type Error = Error;
+
+    fn try_from(other: Value) -> Result<f64, Self::Error> {
+        match other {
+            Value::Float(f) => Ok(f),
+            _ => Err(Error::BadVariableType),
+        }
+    }
+}
+
+impl From<bool> for Value {
+    fn from(b: bool) -> Value { Value::Bool(b) }
+}
+
+impl From<i32> for Value {
+    fn from(i: i32) -> Value { Value::Integer(i) }
+}
+impl From<f64> for Value {
+    fn from(d: f64) -> Value { Value::Float(d) }
 }
 
 #[derive(Debug, Copy, Clone, PartialEq)]
@@ -221,6 +266,20 @@ macro_rules! try_with_env {
 }
 
 macro_rules! wasm_deref {
+    (with $ctx:expr, *$ptr:ident = for $item:ident in $collection:expr) => {
+        match $ptr.deref(
+            $ctx.memory(0),
+            0,
+            $collection.len().try_into().unwrap(),
+        ) {
+            Some(slice) => {
+                for (src, dest) in $collection.iter().zip(slice.iter()) {
+                    dest.set(*src);
+                }
+            },
+            None => return WASM_GENERIC_ERROR,
+        }
+    };
     (with $ctx:expr, * $ptr:ident = $value:expr) => {
         match $ptr.deref($ctx.memory(0)) {
             Some(cell) => cell.set($value),
@@ -298,7 +357,19 @@ fn wasm_read_input(
     buffer: WasmPtr<u8, Array>,
     buffer_len: i32,
 ) -> i32 {
-    unimplemented!()
+    let mut temp_buffer = vec![0; buffer_len.try_into().unwrap()];
+
+    unsafe {
+        try_with_env!(
+            ctx,
+            read_input(address.try_into().unwrap(), &mut temp_buffer[..]),
+            "Unable to read the input"
+        );
+    }
+
+    wasm_deref!(with ctx, *buffer = for byte in temp_buffer);
+
+    WASM_SUCCESS
 }
 
 fn wasm_write_output(
@@ -307,7 +378,62 @@ fn wasm_write_output(
     data: WasmPtr<u8, Array>,
     data_len: i32,
 ) -> i32 {
-    unimplemented!()
+    let buffer: Vec<u8> =
+        match data.deref(ctx.memory(0), 0, data_len.try_into().unwrap()) {
+            Some(slice) => slice.iter().map(|cell| cell.get()).collect(),
+            None => return WASM_GENERIC_ERROR,
+        };
+
+    unsafe {
+        try_with_env!(
+            ctx,
+            write_output(address.try_into().unwrap(), &buffer),
+            "Unable to set outputs"
+        );
+    }
+
+    WASM_SUCCESS
+}
+
+fn variable_get_and_map<F, Q, T>(
+    ctx: &mut Ctx,
+    name: WasmPtr<u8, Array>,
+    name_len: i32,
+    value: WasmPtr<Q>,
+    map: F,
+) -> i32
+where
+    F: FnOnce(T) -> Q,
+    T: TryFrom<Value>,
+    Q: wasmer_runtime::types::ValueType,
+{
+    let name = match name
+        .get_utf8_string(ctx.memory(0), name_len.try_into().unwrap())
+    {
+        Some(n) => n,
+        None => return WASM_GENERIC_ERROR,
+    };
+
+    let variable = unsafe {
+        try_with_env!(
+            ctx,
+            get_variable(name),
+            "Unable to retrieve the variable"
+        )
+    };
+
+    let variable = match T::try_from(variable) {
+        Ok(v) => v,
+        _ => return WASM_BAD_VARIABLE_TYPE,
+    };
+
+    match value.deref(ctx.memory(0)) {
+        Some(cell) => {
+            cell.set(map(variable));
+            WASM_SUCCESS
+        },
+        None => WASM_GENERIC_ERROR,
+    }
 }
 
 fn wasm_variable_read_boolean(
@@ -316,16 +442,13 @@ fn wasm_variable_read_boolean(
     name_len: i32,
     value: WasmPtr<u8>,
 ) -> i32 {
-    unimplemented!()
-}
-
-fn wasm_variable_write_boolean(
-    ctx: &mut Ctx,
-    name: WasmPtr<u8, Array>,
-    name_len: i32,
-    value: u8,
-) -> i32 {
-    unimplemented!()
+    variable_get_and_map(
+        ctx,
+        name,
+        name_len,
+        value,
+        |b: bool| if b { 1 } else { 0 },
+    )
 }
 
 fn wasm_variable_read_int(
@@ -334,16 +457,7 @@ fn wasm_variable_read_int(
     name_len: i32,
     value: WasmPtr<i32>,
 ) -> i32 {
-    unimplemented!()
-}
-
-fn wasm_variable_write_int(
-    ctx: &mut Ctx,
-    name: WasmPtr<u8, Array>,
-    name_len: i32,
-    value: i32,
-) -> i32 {
-    unimplemented!()
+    variable_get_and_map(ctx, name, name_len, value, |i| i)
 }
 
 fn wasm_variable_read_double(
@@ -352,7 +466,56 @@ fn wasm_variable_read_double(
     name_len: i32,
     value: WasmPtr<f64>,
 ) -> i32 {
-    unimplemented!()
+    variable_get_and_map(ctx, name, name_len, value, |d| d)
+}
+
+fn set_variable<F, Q, T>(
+    ctx: &mut Ctx,
+    name: WasmPtr<u8, Array>,
+    name_len: i32,
+    value: Q,
+    map: F,
+) -> i32
+where
+    F: FnOnce(Q) -> T,
+    T: Into<Value>,
+{
+    let name = match name
+        .get_utf8_string(ctx.memory(0), name_len.try_into().unwrap())
+    {
+        Some(n) => n,
+        None => return WASM_GENERIC_ERROR,
+    };
+
+    let value = map(value).into();
+
+    unsafe {
+        try_with_env!(
+            ctx,
+            set_variable(name, value),
+            "Unable to set the variable"
+        )
+    };
+
+    WASM_SUCCESS
+}
+
+fn wasm_variable_write_boolean(
+    ctx: &mut Ctx,
+    name: WasmPtr<u8, Array>,
+    name_len: i32,
+    value: u8,
+) -> i32 {
+    set_variable(ctx, name, name_len, value, |v| v != 0)
+}
+
+fn wasm_variable_write_int(
+    ctx: &mut Ctx,
+    name: WasmPtr<u8, Array>,
+    name_len: i32,
+    value: i32,
+) -> i32 {
+    set_variable(ctx, name, name_len, value, |v| v)
 }
 
 fn wasm_variable_write_double(
@@ -361,7 +524,7 @@ fn wasm_variable_write_double(
     name_len: i32,
     value: f64,
 ) -> i32 {
-    unimplemented!()
+    set_variable(ctx, name, name_len, value, |v| v)
 }
 
 pub struct InMemory {
