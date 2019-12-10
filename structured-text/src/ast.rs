@@ -587,9 +587,18 @@ pub struct FloatLiteral {
     pub span: Span,
 }
 
+
 impl FloatLiteral {
     fn from_pair(pair: Pair<'_, Rule>) -> Result<FloatLiteral, ParseError> {
         let span = to_span(pair.as_span());
+
+        let mut items = pair.into_inner();
+        let float_characteristic = items.next().unwrap()?;
+        let float_mantissa = items.next().unwrap();
+        let float_exponent = items.next();
+
+        
+        
 
         match pair.as_rule() {
             Rule::float => Ok(FloatLiteral {
@@ -986,12 +995,41 @@ mod tests {
 
     #[test]
     fn parse_engineering_float() {
-        let src = "3.14e2";
-        let expected = FloatLiteral {
-            value: 314.0,
-            span: Span::new(0, 7),
-        };
+        let inputs = vec![
+            ("3.14", 3.14, Span::new(0,0)),
+            ("3.14e0", 3.14, Span::new(0,0)),
+            ("2e-5", 2e-5, Span::new(0,0)),
+          ];
+
+
+        
+          for (src, float_value, span) in inputs {
+
+
+            let pairs = RawParser::parse(Rule::float, src).unwrap();
+
+            for pair in pairs{
+                _pretty_print(pair,0);
+            }
+
+
+            parses_to! {
+                parser: RawParser,
+                input: src,
+                rule: Rule::float,
+                tokens: [float(0, 4)]
+            }
+
+            let got = FloatLiteral::from_str(src).unwrap();
+            let should_be = FloatLiteral{
+                value: float_value,
+                span: span,
+            };
+            assert_eq!(got, should_be);
+          }
     }
+        
+    
 
     #[test]
     fn parse_an_integer() {
