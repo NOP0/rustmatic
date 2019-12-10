@@ -592,26 +592,59 @@ impl FloatLiteral {
     fn from_pair(pair: Pair<'_, Rule>) -> Result<FloatLiteral, ParseError> {
         let span = to_span(pair.as_span());
 
-        let mut items = pair.into_inner();
-        let float_characteristic = items.next().unwrap()?;
-        let float_mantissa = items.next().unwrap();
-        let float_exponent = items.next();
+        if pair.as_rule() == Rule::float_engineering {
+            let mut items = pair.into_inner();
+            let float_characteristic = items.next().unwrap();
+            let float_mantissa = items.next().unwrap();
 
-        
-        
+            let sign = match items.next().as_rule() {
+                Rule::plus => 1.0,
+                Rule::minus=> -1.0,
+                _ => 1.0, // No sign given
+            };
 
-        match pair.as_rule() {
-            Rule::float => Ok(FloatLiteral {
-                value: pair.as_str().parse().unwrap(),
+            let exponent: f64 = items.next().unwrap().parse().unwrap();
+            let base : f64 = format!("{}.{}", float_characteristic, float_mantissa).parse().unwrap();
+            let float = base*(sign*exponent.powf(10.0));
+
+
+
+               
+
+            return Ok(IntegerLiteral {
+                value: lit.value,
                 span,
-            }),
+            });
+        }
+
+        let radix = match pair.as_rule() {
+            Rule::integer_decimal => 10,
+            Rule::integer_hexadecimal => 16,
+            Rule::integer_binary => 2,
             _ => {
                 return Err(ParseError::expected_one_of(
-                    &[Rule::float,],
+                    &[
+                        Rule::integer_decimal,
+                        Rule::integer_hexadecimal,
+                        Rule::integer_binary,
+                    ],
                     pair.as_span(),
                 ));
             },
-        }
+        };
+
+        let mut items = pair.into_inner();
+        let float_characteristic = items.next().unwrap();
+        let float_mantissa = items.next().unwrap();
+
+        let engineering_exponent = items.next();
+
+        
+
+        Ok(FloatLiteral {
+            value: pair.as_str().parse().unwrap(),
+            span: to_span(pair.as_span()),
+        })
     }
 }
 
