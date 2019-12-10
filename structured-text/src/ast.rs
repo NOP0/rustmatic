@@ -596,29 +596,9 @@ impl FloatLiteral {
                 value: pair.as_str().parse().unwrap(),
                 span,
             }),
-            Rule::float_engineering => {
-                let mut items = pair.into_inner();
-                let float = FloatLiteral::from_pair(
-                    items
-                    .next()
-                    .unwrap())
-                    .unwrap()
-                    .value;
-                let exponent = IntegerLiteral::from_pair(
-                    items
-                    .next()
-                    .unwrap())
-                    .unwrap()
-                    .value as u32;
-
-                Ok(FloatLiteral {
-                    value: (float * (u32::pow(10, exponent) as f64)),
-                    span,
-                })
-            },
             _ => {
                 return Err(ParseError::expected_one_of(
-                    &[Rule::float, Rule::float_engineering],
+                    &[Rule::float,],
                     pair.as_span(),
                 ));
             },
