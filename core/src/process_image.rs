@@ -19,14 +19,21 @@ pub enum AccessType {
 }
 
 pub struct ProcessImage {
-    pub image: [u8; PI_LENGTH],
+    pub image: Vec<u8>,
     pub devices: Vec<(DeviceID, Address)>,
 }
 
 impl ProcessImage {
     pub fn new() -> Self {
         ProcessImage {
-            image: [0; PI_LENGTH],
+            image: vec![0;PI_LENGTH],
+            devices: Vec::new(),
+        }
+    }
+
+    pub fn with_capacity(capacity: usize) -> Self {
+        ProcessImage {
+            image: vec![0;capacity],
             devices: Vec::new(),
         }
     }

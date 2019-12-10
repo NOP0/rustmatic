@@ -60,6 +60,7 @@ pub trait Process {
     fn poll(&mut self, system: &mut dyn System) -> Transition<Self::Fault>;
 
     fn init(&mut self, system: &mut dyn System) -> Result<(), Self::Fault>{
+        let _ = system;
         Ok(())
     }
 }
