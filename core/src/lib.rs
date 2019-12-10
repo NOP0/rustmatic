@@ -59,7 +59,9 @@ pub trait Process {
 
     fn poll(&mut self, system: &mut dyn System) -> Transition<Self::Fault>;
 
-    fn init(&mut self, system: &mut dyn System) -> Result<(), Self::Fault>;
+    fn init(&mut self, system: &mut dyn System) -> Result<(), Self::Fault>{
+        Ok(())
+    }
 }
 
 /// What should we do after polling a [`Process`]?
