@@ -1,4 +1,4 @@
-use log::Record;
+use log::{Level, Record};
 use std::{
     collections::HashMap,
     panic,
@@ -26,7 +26,7 @@ pub trait Environment {
         buffer: &[u8],
     ) -> Result<(), Error>;
 
-    fn log(&self, record: &Record) -> Result<(), Error>;
+    fn log(&self, record: &Record<'_>) -> Result<(), Error>;
 
     fn get_variable(&self, name: &str) -> Result<Value, Error>;
 
@@ -163,17 +163,6 @@ struct State<'a> {
     env: &'a mut dyn Environment,
 }
 
-impl<'a> State<'a> {
-    /// # Safety
-    ///
-    /// This assumes the [`Ctx`] was set up correctly using
-    /// [`Program::with_environment_context()`].
-    unsafe fn from_ctx(ctx: &mut Ctx) -> &'a mut State<'a> {
-        assert!(!ctx.data.is_null());
-        &mut *(ctx.data as *mut State)
-    }
-}
-
 /// Print the provided message to the screen.
 ///
 /// Returns `-1` if the operation failed.
@@ -198,7 +187,8 @@ const WASM_BAD_VARIABLE_TYPE: i32 = 4;
 ///
 /// # Safety
 ///
-/// See [`State::from_ctx()`] for the assumptions and invariants around safety.
+/// This assumes the [`Ctx`] was set up correctly using
+/// [`Program::with_environment_context()`].
 macro_rules! try_with_env {
     ($ctx:expr, $method:ident ( $($arg:expr),* ), $failure_msg:expr) => {{
         // the data pointer should have been set by `with_environment_context()`
@@ -206,7 +196,7 @@ macro_rules! try_with_env {
             return WASM_GENERIC_ERROR;
         }
 
-        let state = State::from_ctx($ctx);
+        let state = &mut *($ctx.data as *mut State);
 
         // call the method using the provided arguments
         match state.env.$method( $( $arg ),* ) {
@@ -254,6 +244,12 @@ fn wasm_current_time(
     WASM_SUCCESS
 }
 
+const LOG_ERROR: i32 = 0;
+const LOG_WARN: i32 = 1;
+const LOG_INFO: i32 = 2;
+const LOG_DEBUG: i32 = 3;
+const LOG_TRACE: i32 = 4;
+
 fn wasm_log(
     ctx: &mut Ctx,
     level: i32,
@@ -263,7 +259,37 @@ fn wasm_log(
     message: WasmPtr<u8, Array>,
     message_len: i32,
 ) -> i32 {
-    unimplemented!()
+    // Note: We can't directly accept the Level enum here because out-of-range
+    // enum variants are insta-UB
+    let level = match level {
+        LOG_ERROR => Level::Error,
+        LOG_WARN => Level::Warn,
+        LOG_INFO => Level::Info,
+        LOG_DEBUG => Level::Debug,
+        LOG_TRACE => Level::Trace,
+        _ => Level::Debug,
+    };
+    let filename = file.get_utf8_string(ctx.memory(0), file_len as u32);
+    let message = message
+        .get_utf8_string(ctx.memory(0), message_len as u32)
+        .unwrap_or_default();
+
+    unsafe {
+        try_with_env!(
+            ctx,
+            // unfortunately constructing a log and using it needs to be in a
+            // single statement because lifetimes
+            log(&Record::builder()
+                .level(level)
+                .file(filename.as_deref())
+                .line(Some(line as u32))
+                .args(format_args!("{}", message))
+                .build()),
+            "Logging failed"
+        );
+    }
+
+    WASM_SUCCESS
 }
 
 fn wasm_read_input(
