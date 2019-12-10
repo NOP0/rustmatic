@@ -1,5 +1,12 @@
 //! A parser for the [*Structured Text*][st] programming language.
 //!
+//! # Optional Features
+//!
+//! Extra functionality is accessible by enabling feature flags. The features
+//! currently available are:
+//!
+//! - **serde-1** - Serialization using the [`serde`] crate
+//!
 //! [st]: https://en.wikipedia.org/wiki/Structured_text
 
 #[macro_use]

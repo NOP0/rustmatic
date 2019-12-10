@@ -4,13 +4,16 @@ program = { ^"program" ~ identifier ~ preamble ~ block ~ ^"end_program" ~ ";"? }
 function_block = {
     ^"function_block" ~ identifier ~ preamble ~ block ~ ^"end_function_block" ~ ";"?
 }
+function = {
+    ^"function" ~ identifier ~ ":" ~ identifier ~ preamble ~ block ~ ^"end_function" ~ ";"?
+}
 
 preamble = { var_block* }
 
 var_block                   = { var_block_kind ~ (variable_decl ~ ";")* ~ ^"end_var" }
 variable_decl               = { identifier ~ ":" ~ identifier ~ (assign ~ expression)? }
 var_block_kind = _{ 
-    global_var_block | external_var_block | input_var_block | output_var_block |
+    global_var_block | external_var_block | input_var_block | output_var_block | inout_var_block |
     normal_var_block 
 }
 normal_var_block            = { ^"var" }
@@ -18,6 +21,7 @@ global_var_block            = { ^"var_global" }
 external_var_block          = { ^"var_external" }
 input_var_block             = { ^"var_input" }
 output_var_block            = { ^"var_output" }
+inout_var_block             = { ^"var_in_out "}
 
 block                       = { statement* }
 statement                   = { (assignment| repeat) ~ ";" }
@@ -28,7 +32,7 @@ repeat_body                 = _{ block ~ ^"until" ~ assignment ~ ";" }
 
 expression                  = _{ infix | expression_inner }
 infix                       =  { expression_inner ~ (binary_operator ~ expression_inner)+ }
-expression_inner            = _{ if_expression | unary | literal | identifier | braced_expression }
+expression_inner            = _{ unary | literal | identifier | braced_expression }
 braced_expression           = _{ "(" ~ expression ~ ")" }
 unary                       =  { unary_operator ~ (literal | identifier | braced_expression) }
 
@@ -44,9 +48,9 @@ float_mantissa              = _{ ('0'..'9')+ }
 
 integer                     = ${ integer_hexadecimal_sigil | integer_binary_sigil | integer_decimal | integer_zero }
 integer_decimal             =  { '1'..'9' ~ ('0'..'9' | "_")* }
-integer_hexadecimal_sigil   = _{ ^"0x" ~ integer_hexadecimal }
+integer_hexadecimal_sigil   = _{ ^"16#" ~ integer_hexadecimal }
 integer_hexadecimal         =  { ('0'..'9' | 'a'..'f' | 'A'..'F') ~ ('0'..'9' | 'a'..'f' | 'A'..'F' | "_")* }
-integer_binary_sigil        = _{ ^"0b" ~ integer_binary }
+integer_binary_sigil        = _{ ^"2#" ~ integer_binary }
 integer_binary              =  { ('0'..'1') ~ ('0'..'1' | "_")* }
 integer_zero                =  { "0" }
 
@@ -81,20 +85,26 @@ unary_operator              = _{ plus | minus }
 
 keyword = {
     ^"at" | 
+    ^"by" |
+    ^"case" |
     ^"configuration" | 
     ^"do" |
     ^"else" | 
-    ^"elsif" | 
+    ^"elsif" |
+    ^"end_case" | 
     ^"end_configuration" | 
+    ^"end_function" |
     ^"end_function_block" | 
     ^"end_if" | 
     ^"end_program" | 
     ^"end_repeat" |
     ^"end_while" | 
+    ^"function" |
     ^"function_block" | 
     ^"if" | 
     ^"program" | 
-    ^"repeat" | 
+    ^"repeat" |
+    ^"resource" | 
     ^"task" | 
     ^"then" | 
     ^"until" | 
@@ -102,13 +112,30 @@ keyword = {
     ^"var_global" | 
     ^"var_input" | 
     ^"var_output" | 
+    ^"var_in_out" |
     ^"var" | 
     ^"while" | 
     ^"with" 
 }
 
-if_expression = {
-    ^"if"
+conditional = {
+    if_branch ~ elsif_branch* ~ else_branch? ~ ^"end_if"
+}
+
+if_branch = {
+    ^"if" ~ condition_then_block
+}
+
+elsif_branch = {
+    ^"elsif" ~ condition_then_block
+}
+
+else_branch = {
+    ^"else" ~ block
+}
+
+condition_then_block = _{
+    expression ~ ^"then" ~ block
 }
 
 identifier = @{
