@@ -1,7 +1,8 @@
 //! The system in charge of working with IO and executing processes.
 
 use rustmatic_core::{
-    DeviceManager, Process, System, Transition, Value, VariableIndex,
+    DeviceManager, Process, ProcessImage, System, Transition, Value,
+    VariableIndex,
 };
 use slotmap::DenseSlotMap;
 use std::{cell::RefCell, time::Instant};
@@ -16,7 +17,9 @@ type Variables = DenseSlotMap<VariableIndex, Variable>;
 
 /// The PLC runtime.
 pub struct Runtime {
-    pub(crate) devices: DeviceManager,
+    pub devices: DeviceManager,
+    pub inputs: ProcessImage,
+    pub outputs: ProcessImage,
     pub(crate) processes: Processes,
     pub(crate) variables: Variables,
 }
@@ -26,6 +29,8 @@ impl Runtime {
     pub fn new() -> Self {
         Runtime {
             devices: DeviceManager::new(),
+            inputs: ProcessImage::new(),
+            outputs: ProcessImage::new(),
             processes: Processes::with_key(),
             variables: Variables::with_key(),
         }
@@ -53,16 +58,19 @@ impl Runtime {
         let mut to_remove = Vec::new();
         let mut faults = Vec::new();
 
-        // poll all registered process
+        self.inputs.update_inputs(&mut self.devices);
+
         for (pid, process) in &mut self.processes {
             // set up the device context
-            let ctx = Context {
+            let mut ctx = Context {
                 devices: &self.devices,
+                inputs: &mut self.inputs,
+                outputs: &mut self.outputs,
                 current_process: pid,
                 variables: RefCell::new(&mut self.variables),
             };
 
-            match process.poll(&ctx) {
+            match process.poll(&mut ctx) {
                 Transition::Completed => to_remove.push(pid),
                 Transition::StillRunning => {},
                 Transition::Fault(fault) => {
@@ -76,6 +84,21 @@ impl Runtime {
 
         faults
     }
+
+    pub fn init(&mut self) -> Result<(), Fault> {
+        for (pid, process) in &mut self.processes {
+            // set up the device context
+            let mut ctx = Context {
+                devices: &self.devices,
+                inputs: &mut self.inputs,
+                outputs: &mut self.outputs,
+                current_process: pid,
+                variables: RefCell::new(&mut self.variables),
+            };
+            process.init(&mut ctx)?;
+        }
+        Ok(())
+    }
 }
 
 /// Something went wrong...
@@ -86,6 +109,8 @@ pub enum Fault {}
 /// known by our [`Runtime`].
 struct Context<'a> {
     devices: &'a DeviceManager,
+    inputs: &'a mut ProcessImage,
+    outputs: &'a mut ProcessImage,
     variables: RefCell<&'a mut Variables>,
     current_process: ProcessIndex,
 }
@@ -122,6 +147,10 @@ impl<'a> System for Context<'a> {
             *value = new_value;
         }
     }
+
+    fn inputs(&mut self) -> &mut ProcessImage { self.inputs }
+
+    fn outputs(&mut self) -> &mut ProcessImage { self.outputs }
 }
 
 /// A [`Variable`] is some value that can be accessed by different parts of the

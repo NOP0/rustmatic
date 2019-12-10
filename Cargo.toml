@@ -8,7 +8,10 @@ publish = false
 license = "MIT OR Apache-2.0"
 
 [dependencies]
-slotmap = "0.4.0"
+rustmatic-core = {path = "./core"}
+rustmatic-runtime = { path = "./runtime" }
+# rustmatic-gpio = { path = "./gpio" }
+rustmatic-dummy-input = { path = "./dummy-input" }
 
 [workspace]
 members = ["core", "runtime", "gpio", "structured-text", "iec", "iec-std"]

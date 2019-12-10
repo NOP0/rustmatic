@@ -1,15 +1,11 @@
 [package]
-name = "rustmatic-core"
+name = "rustmatic-dummy-input"
 version = "0.1.0"
 authors = ["Michael Bryan <michaelfbryan@gmail.com>"]
 edition = "2018"
-publish = false
-description = "Core abstractions and datatypes used by the rustmatic PLC environment."
+description = "The component in charge of running programs and interfacing with the outside world."
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-slotmap = "0.4.0"
-anymap = "0.12.1"
-byteorder = "1.3.2"
-
+rustmatic-core = { path = "../core" }

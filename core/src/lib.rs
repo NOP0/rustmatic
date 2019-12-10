@@ -2,10 +2,12 @@
 
 mod device;
 mod device_manager;
+mod process_image;
 
 pub use crate::{
-    device::{Device, DeviceError, DeviceRegistrar},
+    device::{Device, DeviceError},
     device_manager::{DeviceManager, Devices},
+    process_image::{AccessType, Address, ProcessImage},
 };
 
 use std::time::Instant;
@@ -32,6 +34,9 @@ pub trait System {
     fn read_variable(&self, index: VariableIndex) -> Option<Value>;
     /// Give a variable a new value.
     fn set_variable(&self, index: VariableIndex, new_value: Value);
+
+    fn inputs(&mut self) -> &mut ProcessImage;
+    fn outputs(&mut self) -> &mut ProcessImage;
 }
 
 slotmap::new_key_type! {
@@ -52,7 +57,12 @@ slotmap::new_key_type! {
 pub trait Process {
     type Fault;
 
-    fn poll(&mut self, system: &dyn System) -> Transition<Self::Fault>;
+    fn poll(&mut self, system: &mut dyn System) -> Transition<Self::Fault>;
+
+    fn init(&mut self, system: &mut dyn System) -> Result<(), Self::Fault>{
+        let _ = system;
+        Ok(())
+    }
 }
 
 /// What should we do after polling a [`Process`]?
