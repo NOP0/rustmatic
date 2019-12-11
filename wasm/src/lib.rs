@@ -159,9 +159,6 @@ impl Program {
     }
 
     pub fn poll(&mut self, env: &mut dyn Environment) -> Result<(), Error> {
-        let mut state = State { env };
-        self.instance.context_mut().data = &mut state as *mut State as *mut _;
-
         self.with_environment_context(env, |instance| {
             instance.call("poll", &[])?;
             Ok(())
