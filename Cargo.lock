@@ -968,6 +968,9 @@ dependencies = [
 [[package]]
 name = "rustmatic-iec-std"
 version = "0.1.0"
+dependencies = [
+ "arrayvec 0.5.1 (registry+https://github.com/rust-lang/crates.io-index)",
+]
 
 [[package]]
 name = "rustmatic-runtime"

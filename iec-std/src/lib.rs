@@ -3,7 +3,6 @@
 // we are the standard library.
 #![no_std]
 
-pub(crate) mod buffer;
 pub(crate) mod ctypes;
 #[allow(bad_style)]
 pub mod intrinsics;

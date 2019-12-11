@@ -1,15 +1,13 @@
 #![cfg(all(not(test), target_arch = "wasm32"))]
 
-use core::{fmt, fmt::Write, panic::PanicInfo};
+use core::{fmt::Write, panic::PanicInfo};
 
-use crate::{
-    buffer::Buffer,
-    intrinsics::{self, wasm_log_level_LOG_ERROR as LOG_ERROR},
-};
+use crate::intrinsics::{self, wasm_log_level_LOG_ERROR as LOG_ERROR};
+use arrayvec::ArrayString;
 
 #[panic_handler]
 pub fn panic_handler(info: &PanicInfo) -> ! {
-    let mut buffer = Buffer::new([0; 512]);
+    let mut buffer: ArrayString<[u8; 512]> = ArrayString::new();
 
     unsafe {
         let _ = write!(buffer, "{}", info);
