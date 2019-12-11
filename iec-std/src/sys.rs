@@ -2,11 +2,14 @@
 
 use core::{fmt, fmt::Write, panic::PanicInfo};
 
-use crate::intrinsics::{self, wasm_log_level_LOG_ERROR as LOG_ERROR};
+use crate::{
+    buffer::Buffer,
+    intrinsics::{self, wasm_log_level_LOG_ERROR as LOG_ERROR},
+};
 
 #[panic_handler]
 pub fn panic_handler(info: &PanicInfo) -> ! {
-    let mut buffer = Buffer::default();
+    let mut buffer = Buffer::new([0; 512]);
 
     unsafe {
         let _ = write!(buffer, "{}", info);
@@ -25,39 +28,5 @@ pub fn panic_handler(info: &PanicInfo) -> ! {
         );
 
         core::arch::wasm32::unreachable()
-    }
-}
-
-struct Buffer {
-    buffer: [u8; 512],
-    cursor: usize,
-}
-
-impl Buffer {
-    fn as_str(&self) -> &str {
-        core::str::from_utf8(&self.buffer[..self.cursor]).unwrap()
-    }
-}
-
-impl Default for Buffer {
-    fn default() -> Buffer {
-        Buffer {
-            buffer: [0; 512],
-            cursor: 0,
-        }
-    }
-}
-
-impl Write for Buffer {
-    fn write_str(&mut self, s: &str) -> fmt::Result {
-        let end_ix = self.cursor + s.len();
-
-        if end_ix < self.buffer.len() {
-            self.buffer[self.cursor..end_ix].copy_from_slice(s.as_bytes());
-            self.cursor = end_ix;
-            Ok(())
-        } else {
-            Err(fmt::Error)
-        }
     }
 }
