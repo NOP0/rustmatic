@@ -15,3 +15,4 @@ rustmatic-dummy-input = { path = "./dummy-input" }
 
 [workspace]
 members = ["core", "runtime", "gpio", "structured-text", "iec", "iec-std", "wasm"]
+exclude = ["wasm/examples/wasm-programs/*"]
