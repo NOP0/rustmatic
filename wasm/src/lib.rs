@@ -2,6 +2,7 @@ use log::{Level, Record};
 use std::{
     collections::HashMap,
     convert::{TryFrom, TryInto},
+    os::raw::c_void,
     panic,
     panic::AssertUnwindSafe,
     ptr,
@@ -177,7 +178,8 @@ impl Program {
         let instance = &mut self.instance;
 
         // point the data pointer at our temporary state.
-        instance.context_mut().data = &mut state as *mut State<'_> as *mut _;
+        instance.context_mut().data =
+            &mut state as *mut State<'_> as *mut c_void;
         // we can't use the old state variable any more (we'd have aliased
         // pointers) so deliberately shadow it
         #[allow(unused_variables)]
