@@ -331,7 +331,8 @@ fn wasm_log(
     let filename = file.get_utf8_string(ctx.memory(0), file_len as u32);
     let message = message
         .get_utf8_string(ctx.memory(0), message_len as u32)
-        .unwrap_or_default();
+        .unwrap_or_default()
+        .trim_end();
 
     unsafe {
         try_with_env!(

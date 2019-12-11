@@ -2,6 +2,8 @@ use rustmatic_wasm::{InMemory, Program};
 use std::env;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+    env_logger::init();
+
     let wasm_file = match env::args().skip(1).next() {
         Some(filename) => filename,
         None => panic!("Usage: basic-runtime <wasm-file>"),
