@@ -39,7 +39,7 @@ enum wasm_log_level {
  * Log a message at the specified level, including information about the file
  * and line the message was logged from.
  */
-int wasm_log(int level, const char *file, int file_len, int line,
+enum wasm_result_t wasm_log(enum wasm_log_level level, const char *file, int file_len, int line,
              const char *message, int message_len);
 
 /**
@@ -50,12 +50,12 @@ int wasm_log(int level, const char *file, int file_len, int line,
 /**
  * Read from an input from memory-mapped IO.
  */
-int wasm_read_input(uint32_t address, char *buffer, int buffer_len);
+enum wasm_result_t wasm_read_input(uint32_t address, char *buffer, int buffer_len);
 
 /**
  * Write to an output using memory-mapped IO.
  */
-int wasm_write_output(uint32_t address, const char *data, int data_len);
+enum wasm_result_t wasm_write_output(uint32_t address, const char *data, int data_len);
 
 /**
  * Get a measurement of a monotonically nondecreasing clock.
@@ -63,7 +63,7 @@ int wasm_write_output(uint32_t address, const char *data, int data_len);
  * The absolute numbers don't necessarily mean anything, the difference
  * between two measurements can be used to tell how much time has passed.
  */
-int wasm_current_time(uint64_t *secs, uint32_t *nanos);
+enum wasm_result_t wasm_current_time(uint64_t *secs, uint32_t *nanos);
 
 /**
  * Read a globally defined boolean variable.
@@ -71,7 +71,7 @@ int wasm_current_time(uint64_t *secs, uint32_t *nanos);
  * Reading an unknown variable or trying to access a variable using the wrong
  * type will result in an error.
  */
-int wasm_variable_read_boolean(const char *name, int name_len, bool *value);
+enum wasm_result_t wasm_variable_read_boolean(const char *name, int name_len, bool *value);
 
 /**
  * Read a globally defined floating-point variable.
@@ -79,7 +79,7 @@ int wasm_variable_read_boolean(const char *name, int name_len, bool *value);
  * Reading an unknown variable or trying to access a variable using the wrong
  * type will result in an error.
  */
-int wasm_variable_read_double(const char *name, int name_len, double *value);
+enum wasm_result_t wasm_variable_read_double(const char *name, int name_len, double *value);
 
 /**
  * Read a globally defined integer variable.
@@ -87,27 +87,27 @@ int wasm_variable_read_double(const char *name, int name_len, double *value);
  * Reading an unknown variable or trying to access a variable using the wrong
  * type will result in an error.
  */
-int wasm_variable_read_int(const char *name, int name_len, int32_t *value);
+enum wasm_result_t wasm_variable_read_int(const char *name, int name_len, int32_t *value);
 
 /**
  * Write to a globally defined boolean variable.
  *
  * This may fail if the variable already exists and has a different type.
  */
-int wasm_variable_write_boolean(const char *name, int name_len, bool value);
+enum wasm_result_t wasm_variable_write_boolean(const char *name, int name_len, bool value);
 
 /**
  * Write to a globally defined floating-point variable.
  *
  * This may fail if the variable already exists and has a different type.
  */
-int wasm_variable_write_double(const char *name, int name_len, double value);
+enum wasm_result_t wasm_variable_write_double(const char *name, int name_len, double value);
 
 /**
  * Write to a globally defined integer variable.
  *
  * This may fail if the variable already exists and has a different type.
  */
-int wasm_variable_write_int(const char *name, int name_len, int32_t value);
+enum wasm_result_t wasm_variable_write_int(const char *name, int name_len, int32_t value);
 
 #endif // WASM_INTRINSICS_H
