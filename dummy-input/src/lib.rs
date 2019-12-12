@@ -40,21 +40,21 @@ impl Display for DummyBool {
     }
 }
 
-pub struct DummyU32 {
+pub struct DummyDoubleWord {
     value: u32,
     created: Instant,
 }
 
-impl DummyU32 {
+impl DummyDoubleWord {
     pub fn new() -> Self {
-        DummyU32 {
+        DummyDoubleWord {
             value: 0,
             created: Instant::now(),
         }
     }
 }
 
-impl Device<u32> for DummyU32 {
+impl Device<u32> for DummyDoubleWord {
     fn read(&self) -> Result<u32, DeviceError> {
         let elapsed = self.created.elapsed().as_secs();
 
@@ -70,8 +70,8 @@ impl Device<u32> for DummyU32 {
     }
 }
 
-impl Display for DummyU32 {
+impl Display for DummyDoubleWord {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(f, "DummyU32 value:s {}", self.value)
+        write!(f, "DummyDoubleWord value:s {}", self.value)
     }
 }
