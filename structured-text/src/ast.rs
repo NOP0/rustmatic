@@ -587,64 +587,24 @@ pub struct FloatLiteral {
     pub span: Span,
 }
 
-
 impl FloatLiteral {
     fn from_pair(pair: Pair<'_, Rule>) -> Result<FloatLiteral, ParseError> {
-        let span = to_span(pair.as_span());
-
-        if pair.as_rule() == Rule::float_engineering {
-            let mut items = pair.into_inner();
-            let float_characteristic = items.next().unwrap();
-            let float_mantissa = items.next().unwrap();
-
-            let sign = match items.next().as_rule() {
-                Rule::plus => 1.0,
-                Rule::minus=> -1.0,
-                _ => 1.0, // No sign given
-            };
-
-            let exponent: f64 = items.next().unwrap().parse().unwrap();
-            let base : f64 = format!("{}.{}", float_characteristic, float_mantissa).parse().unwrap();
-            let float = base*(sign*exponent.powf(10.0));
-
-
-
-               
-
-            return Ok(IntegerLiteral {
-                value: lit.value,
-                span,
-            });
-        }
-
-        let radix = match pair.as_rule() {
-            Rule::integer_decimal => 10,
-            Rule::integer_hexadecimal => 16,
-            Rule::integer_binary => 2,
+        match pair.as_rule() {
+            Rule::float_engineering => Ok(FloatLiteral {
+                value: pair.as_str().parse().unwrap(),
+                span: to_span(pair.as_span()),
+            }),
+            Rule::float => Ok(FloatLiteral {
+                value: pair.as_str().parse().unwrap(),
+                span: to_span(pair.as_span()),
+            }),
             _ => {
                 return Err(ParseError::expected_one_of(
-                    &[
-                        Rule::integer_decimal,
-                        Rule::integer_hexadecimal,
-                        Rule::integer_binary,
-                    ],
+                    &[Rule::float_engineering, Rule::float],
                     pair.as_span(),
                 ));
             },
-        };
-
-        let mut items = pair.into_inner();
-        let float_characteristic = items.next().unwrap();
-        let float_mantissa = items.next().unwrap();
-
-        let engineering_exponent = items.next();
-
-        
-
-        Ok(FloatLiteral {
-            value: pair.as_str().parse().unwrap(),
-            span: to_span(pair.as_span()),
-        })
+        }
     }
 }
 
@@ -1018,7 +978,7 @@ mod tests {
             parser: RawParser,
             input: src,
             rule: Rule::float,
-            tokens: [float(0, 4)]
+            tokens: [float(0, 4, [float_basic(0, 4)])]
         }
 
         let got = FloatLiteral::from_str(src).unwrap();
@@ -1029,40 +989,29 @@ mod tests {
     #[test]
     fn parse_engineering_float() {
         let inputs = vec![
-            ("3.14", 3.14, Span::new(0,0)),
-            ("3.14e0", 3.14, Span::new(0,0)),
-            ("2e-5", 2e-5, Span::new(0,0)),
-          ];
+            ("3.1e-1", 0.31, Span::new(0, 6)),
+            ("3.14e0", 3.14, Span::new(0, 6)),
+            ("2.0e+1", 20.0, Span::new(0, 6)),
+        ];
 
-
-        
-          for (src, float_value, span) in inputs {
-
-
+        for (src, float_value, span) in inputs {
             let pairs = RawParser::parse(Rule::float, src).unwrap();
-
-            for pair in pairs{
-                _pretty_print(pair,0);
-            }
-
 
             parses_to! {
                 parser: RawParser,
                 input: src,
                 rule: Rule::float,
-                tokens: [float(0, 4)]
+                tokens: [float(0, 6, [float_engineering(0, 6)])]
             }
 
             let got = FloatLiteral::from_str(src).unwrap();
-            let should_be = FloatLiteral{
+            let should_be = FloatLiteral {
                 value: float_value,
-                span: span,
+                span,
             };
-            assert_eq!(got, should_be);
-          }
+            assert_eq!(should_be, got);
+        }
     }
-        
-    
 
     #[test]
     fn parse_an_integer() {
@@ -1484,7 +1433,7 @@ mod tests {
                       identifier(415, 429),
                       identifier(433, 437),
                       assign(438, 440),
-                      float(441, 445),
+                      float(441, 445, [float_basic( 441, 445)]),
                     ]),
                   ]),
                   var_block(533, 837, [
