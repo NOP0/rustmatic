@@ -9,5 +9,6 @@ description = "The component in charge of running programs and interfacing with 
 
 [dependencies]
 rustmatic-core = { path = "../core" }
+rustmatic-dummy-input = { path = "../dummy-input" }
 slotmap = "0.4.0"
 anymap = "0.12.1"
