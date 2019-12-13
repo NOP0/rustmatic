@@ -989,19 +989,20 @@ mod tests {
     #[test]
     fn parse_engineering_float() {
         let inputs = vec![
-            ("3.1e-1", 0.31, Span::new(0, 6)),
-            ("3.14e0", 3.14, Span::new(0, 6)),
-            ("2.0e+1", 20.0, Span::new(0, 6)),
+            ("3.1e-1", 3.1e-1, Span::new(0, 6)),
+            ("3.14e0", 3.14e0, Span::new(0, 6)),
+            ("2.0e+1", 2.0e+1, Span::new(0, 6)),
+            ("2.0e+100",2.0e+100, Span::new(0, 8)),
+            ("2.0e-100",2.0e-100, Span::new(0, 8)),
         ];
 
         for (src, float_value, span) in inputs {
-            let pairs = RawParser::parse(Rule::float, src).unwrap();
 
             parses_to! {
                 parser: RawParser,
                 input: src,
                 rule: Rule::float,
-                tokens: [float(0, 6, [float_engineering(0, 6)])]
+                tokens: [float(0, src.len(), [float_engineering(0, src.len())])]
             }
 
             let got = FloatLiteral::from_str(src).unwrap();
