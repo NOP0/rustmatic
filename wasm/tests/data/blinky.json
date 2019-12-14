@@ -1,0 +1,40 @@
+{
+    "passes": [
+        {
+            "delta_time": "200ms",
+            "inputs": [
+                0
+            ],
+            "expected_outputs": [
+                0
+            ]
+        },
+        {
+            "delta_time": "200ms",
+            "inputs": [
+                0
+            ],
+            "expected_outputs": [
+                0
+            ]
+        },
+        {
+            "delta_time": "200ms",
+            "inputs": [
+                0
+            ],
+            "expected_outputs": [
+                1
+            ]
+        },
+        {
+            "delta_time": "200ms",
+            "inputs": [
+                0
+            ],
+            "expected_outputs": [
+                1
+            ]
+        }
+    ]
+}

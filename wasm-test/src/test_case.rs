@@ -58,7 +58,7 @@ pub struct Recipe {
 /// The inputs and expected outputs for a single call to [`Program::poll()`].
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Pass {
-    #[serde(default = "default_delta_time")]
+    #[serde(default = "default_delta_time", with = "humantime_serde")]
     pub delta_time: Duration,
     pub inputs: Vec<u8>,
     pub expected_outputs: Vec<u8>,

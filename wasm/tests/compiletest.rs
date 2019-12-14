@@ -9,6 +9,8 @@ macro_rules! wasm_test {
     ($filename:ident) => {
         #[test]
         fn $filename() -> Result<(), Error> {
+            let _ = env_logger::try_init();
+
             let src = include_str!(concat!("data/", stringify!($filename), ".rs"));
             let recipe = include_str!(concat!("data/", stringify!($filename), ".json"));
 
@@ -21,4 +23,4 @@ macro_rules! wasm_test {
     };
 }
 
-wasm_test!(example_program);
+wasm_test!(example_program, blinky);

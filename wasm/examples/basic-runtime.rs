@@ -12,7 +12,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut env = InMemory::default();
 
     let wasm = std::fs::read(&wasm_file)?;
-    let mut program = Program::load(&wasm)?;
+    let mut program = Program::load("basic-runtime", &wasm)?;
 
     loop {
         program.poll(&mut env)?;

@@ -34,7 +34,11 @@ impl TestEnvironment {
         }
 
         for msg in &pass.expected_log_messages {
-            if !self.log_messages.iter().any(|(_, logged)| logged.contains(msg)) {
+            if !self
+                .log_messages
+                .iter()
+                .any(|(_, logged)| logged.contains(msg))
+            {
                 anyhow::bail!("Expected log message \"{}\"", msg);
             }
         }
@@ -51,11 +55,14 @@ impl rustmatic_wasm::Environment for TestEnvironment {
         address: usize,
         buffer: &mut [u8],
     ) -> Result<(), WasmError> {
+        log::debug!("Reading {} bytes from input {:#x}", buffer.len(), address);
+
         let src = self
             .inputs
             .get(address..address + buffer.len())
             .ok_or(WasmError::AddressOutOfBounds)?;
         buffer.copy_from_slice(src);
+        log::trace!("Input {:#x} = {:?}", address, src);
 
         Ok(())
     }
@@ -65,22 +72,30 @@ impl rustmatic_wasm::Environment for TestEnvironment {
         address: usize,
         buffer: &[u8],
     ) -> Result<(), WasmError> {
+        log::debug!("Writing {} bytes to output {:#x}", buffer.len(), address);
+
         let dest = self
             .inputs
             .get_mut(address..address + buffer.len())
             .ok_or(WasmError::AddressOutOfBounds)?;
         dest.copy_from_slice(buffer);
+        log::trace!("Output {:#x} = {:?}", address, dest);
 
         Ok(())
     }
 
     fn log(&mut self, record: &Record<'_>) -> Result<(), WasmError> {
+        log::logger().log(record);
+        log::trace!("Logging {:?}", record);
+
         self.log_messages
             .push((record.level(), record.args().to_string()));
         Ok(())
     }
 
     fn get_variable(&self, name: &str) -> Result<Value, WasmError> {
+        log::debug!("Getting \"{}\"", name);
+
         self.variables
             .get(name)
             .copied()
@@ -96,9 +111,17 @@ impl rustmatic_wasm::Environment for TestEnvironment {
 
         match self.variables.entry(name.to_string()) {
             Entry::Vacant(vacant) => {
+                log::debug!("Declaring \"{}\" = {:?}", name, value);
                 vacant.insert(value);
             },
             Entry::Occupied(mut occupied) => {
+                log::debug!(
+                    "Overwriting \"{}\" from {:?} to {:?}",
+                    name,
+                    occupied.get(),
+                    value
+                );
+
                 if occupied.get().kind() == value.kind() {
                     occupied.insert(value);
                 } else {

@@ -23,7 +23,7 @@ impl Compiler {
         )
         .unwrap();
 
-        Program::load(&wasm)
+        Program::load(name, &wasm)
             .map_err(|e| anyhow::format_err!("WASM loading failed: {}", e))
     }
 }

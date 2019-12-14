@@ -134,11 +134,15 @@ pub enum Type {
 
 /// A user-provided program loaded into memory.
 pub struct Program {
-    instance: wasmer_runtime::Instance,
+    instance: Instance,
+    name: String,
 }
 
 impl Program {
-    pub fn load(wasm: &[u8]) -> Result<Self, WasmerError> {
+    pub fn load<S>(name: S, wasm: &[u8]) -> Result<Self, WasmerError>
+    where
+        S: Into<String>,
+    {
         let imports = wasmer_runtime::imports! {
             "env" => {
                 "print" => wasmer_runtime::func!(print),
@@ -156,8 +160,13 @@ impl Program {
         };
         let instance = wasmer_runtime::instantiate(wasm, &imports)?;
 
-        Ok(Program { instance })
+        Ok(Program {
+            instance,
+            name: name.into(),
+        })
     }
+
+    pub fn name(&self) -> &str { &self.name }
 
     pub fn poll(&mut self, env: &mut dyn Environment) -> Result<(), Error> {
         self.with_environment_context(env, |instance| {
@@ -179,7 +188,10 @@ impl Program {
     where
         F: FnOnce(&Instance) -> Result<T, Error>,
     {
-        let mut state = State { env };
+        let mut state = State {
+            env,
+            name: &self.name,
+        };
         let instance = &mut self.instance;
 
         // point the data pointer at our temporary state.
@@ -210,6 +222,7 @@ impl Program {
 /// Temporary state passed to each host function via [`Ctx::data`].
 struct State<'a> {
     env: &'a mut dyn Environment,
+    name: &'a str,
 }
 
 /// Print the provided message to the screen.
@@ -339,6 +352,8 @@ fn wasm_log(
         .trim_end();
 
     unsafe {
+        let program_name = (*(ctx.data as *mut State)).name;
+
         try_with_env!(
             ctx,
             // unfortunately constructing a log and using it needs to be in a
@@ -347,6 +362,8 @@ fn wasm_log(
                 .level(level)
                 .file(filename.as_deref())
                 .line(Some(line as u32))
+                .module_path(Some(program_name))
+                .target(program_name)
                 .args(format_args!("{}", message))
                 .build()),
             "Logging failed"
@@ -388,6 +405,8 @@ fn wasm_write_output(
             Some(slice) => slice.iter().map(|cell| cell.get()).collect(),
             None => return WASM_GENERIC_ERROR,
         };
+
+    log::debug!("Buffer from WASM: {:?}", buffer);
 
     unsafe {
         try_with_env!(
