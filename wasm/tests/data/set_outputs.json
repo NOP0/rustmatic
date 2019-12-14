@@ -1,6 +1,7 @@
 {
     "passes": [
         {
+            "elapsed": "50ms",
             "inputs": [],
             "expected_outputs": [
                 0,
