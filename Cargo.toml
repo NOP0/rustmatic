@@ -14,7 +14,7 @@ rustmatic-runtime = { path = "./runtime" }
 rustmatic-dummy-input = { path = "./dummy-input" }
 
 [workspace]
-members = ["core", "runtime", "gpio", "structured-text", "iec", "iec-std", "wasm", "wasm-test"]
+members = ["core", "runtime", "structured-text", "iec", "iec-std", "wasm", "wasm-test"]
 exclude = ["wasm/examples/wasm-programs/*"]
 
 [patch.crates-io]

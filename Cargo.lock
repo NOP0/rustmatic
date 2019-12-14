@@ -623,19 +623,6 @@ checksum = "a785740271256c230f57462d3b83e52f998433a7062fc18f96d5999474a9f915"
 
 [[package]]
 name = "nix"
-version = "0.14.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6c722bee1037d430d0f8e687bbdbf222f27cc6e4e68d5caf630857bb2b6dbdce"
-dependencies = [
- "bitflags",
- "cc",
- "cfg-if",
- "libc",
- "void",
-]
-
-[[package]]
-name = "nix"
 version = "0.15.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3b2e0b4f3320ed72aaedb9a5ac838690a8047c7b275da22711fddff4f8a14229"
@@ -973,14 +960,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "rustmatic-gpio"
-version = "0.1.0"
-dependencies = [
- "rustmatic-core",
- "sysfs_gpio",
-]
-
-[[package]]
 name = "rustmatic-iec"
 version = "0.1.0"
 dependencies = [
@@ -1230,15 +1209,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "sysfs_gpio"
-version = "0.5.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "24961a55846623d8e4f6cec38718945116fed8d6970336a7110710a07aa9b5d1"
-dependencies = [
- "nix 0.14.1",
-]
-
-[[package]]
 name = "target-lexicon"
 version = "0.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1359,7 +1329,7 @@ dependencies = [
  "cranelift-entity",
  "cranelift-native",
  "libc",
- "nix 0.15.0",
+ "nix",
  "rayon",
  "serde",
  "serde-bench",
@@ -1426,7 +1396,7 @@ dependencies = [
  "indexmap",
  "lazy_static",
  "libc",
- "nix 0.15.0",
+ "nix",
  "page_size",
  "parking_lot",
  "rustc_version",
