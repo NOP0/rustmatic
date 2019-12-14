@@ -9,7 +9,7 @@ use std::{
     time::{Duration, Instant},
 };
 use wasmer_runtime::{
-    error::{CallError, Error as WasmerError},
+    error::{CallError, Error as WasmerError, RuntimeError},
     Array, Ctx, Instance, WasmPtr,
 };
 
@@ -28,7 +28,7 @@ pub trait Environment {
         buffer: &[u8],
     ) -> Result<(), Error>;
 
-    fn log(&self, record: &Record<'_>) -> Result<(), Error>;
+    fn log(&mut self, record: &Record<'_>) -> Result<(), Error>;
 
     fn get_variable(&self, name: &str) -> Result<Value, Error>;
 
@@ -161,8 +161,13 @@ impl Program {
 
     pub fn poll(&mut self, env: &mut dyn Environment) -> Result<(), Error> {
         self.with_environment_context(env, |instance| {
-            instance.call("poll", &[])?;
-            Ok(())
+            match instance.call("poll", &[]) {
+                Ok(_) => Ok(()),
+                Err(CallError::Runtime(RuntimeError::Error { data })) => {
+                    panic::resume_unwind(data)
+                },
+                Err(other) => Err(Error::from(other)),
+            }
         })
     }
 
@@ -576,7 +581,7 @@ impl Environment for InMemory {
         Ok(())
     }
 
-    fn log(&self, record: &Record) -> Result<(), Error> {
+    fn log(&mut self, record: &Record) -> Result<(), Error> {
         log::logger().log(record);
         Ok(())
     }

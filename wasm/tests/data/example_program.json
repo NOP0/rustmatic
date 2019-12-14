@@ -1,0 +1,12 @@
+{
+    "passes": [
+        {
+            "inputs": [
+                0
+            ],
+            "expected_outputs": [
+                0
+            ]
+        }
+    ]
+}

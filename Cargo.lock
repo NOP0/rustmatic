@@ -1015,10 +1015,22 @@ dependencies = [
  "anyhow",
  "env_logger",
  "log",
- "rustmatic-iec-std",
- "tempfile",
+ "rustmatic-wasm-test",
  "thiserror",
  "wasmer-runtime",
+]
+
+[[package]]
+name = "rustmatic-wasm-test"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "log",
+ "rustmatic-wasm",
+ "serde",
+ "serde_derive",
+ "serde_json",
+ "tempfile",
 ]
 
 [[package]]
@@ -1329,8 +1341,7 @@ checksum = "b89c3ce4ce14bdc6fb6beaf9ec7928ca331de5df7e5ea278375642a2f478570d"
 [[package]]
 name = "wasmer-clif-backend"
 version = "0.11.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "352394fd7aad94ab61d251b29956874ce31487c2ada3052fd95c28b0d1911cb8"
+source = "git+https://github.com/wasmerio/wasmer?rev=8a13917ec5b327d47b302c4002553d279536db54#8a13917ec5b327d47b302c4002553d279536db54"
 dependencies = [
  "byteorder",
  "cranelift-codegen",
@@ -1382,8 +1393,7 @@ dependencies = [
 [[package]]
 name = "wasmer-runtime"
 version = "0.11.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5e727033608224623de506a1d10f2c8d2af82eeef1eadc4bb256c6b1c5b52316"
+source = "git+https://github.com/wasmerio/wasmer?rev=8a13917ec5b327d47b302c4002553d279536db54#8a13917ec5b327d47b302c4002553d279536db54"
 dependencies = [
  "lazy_static",
  "memmap",
@@ -1394,8 +1404,7 @@ dependencies = [
 [[package]]
 name = "wasmer-runtime-core"
 version = "0.11.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "05ee6802738107acfac9b13d37c0acb575464ba343ebf519ddbdf04bbc55beab"
+source = "git+https://github.com/wasmerio/wasmer?rev=8a13917ec5b327d47b302c4002553d279536db54#8a13917ec5b327d47b302c4002553d279536db54"
 dependencies = [
  "bincode",
  "blake2b_simd",
@@ -1422,8 +1431,7 @@ dependencies = [
 [[package]]
 name = "wasmer-win-exception-handler"
 version = "0.11.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c0324367abebce02ded75213b384ce28559c9b1ade06ea80a3a204884eb07c2c"
+source = "git+https://github.com/wasmerio/wasmer?rev=8a13917ec5b327d47b302c4002553d279536db54#8a13917ec5b327d47b302c4002553d279536db54"
 dependencies = [
  "cmake",
  "libc",
