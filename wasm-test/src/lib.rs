@@ -24,8 +24,7 @@ pub fn run_test_case(
             .map_err(|e| Error::msg(e.to_string()))
             .context("Polling failed")?;
 
-        env.compare_outputs(pass)
-            .context("Output comparison failed")?;
+        env.compare(pass).context("Output comparison failed")?;
     }
 
     Ok(())
