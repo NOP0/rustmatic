@@ -18,9 +18,10 @@ pub fn run_test_case(
     let mut env = TestEnvironment::default();
 
     for pass in &test_case.recipe.passes {
-        log::debug!("Polling \"{}\" at {:?}", test_case.name, env.elapsed);
-
         env.setup(pass);
+
+        log::debug!("Polling \"{}\" at {:?}", test_case.name, env.elapsed);
+        log::trace!("Environment: {:?}", env);
 
         wasm.poll(&mut env)
             .map_err(|e| Error::msg(e.to_string()))

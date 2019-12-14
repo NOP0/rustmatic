@@ -15,11 +15,11 @@ pub struct TestEnvironment {
 
 impl TestEnvironment {
     pub fn setup(&mut self, pass: &Pass) {
-        assert_ne!(pass.delta_time, Duration::new(0, 0));
-
-        self.elapsed += pass.delta_time;
+        self.elapsed = pass.elapsed;
         self.load_inputs(&pass.inputs);
-        self.outputs = vec![0; pass.expected_outputs.len()];
+        self.outputs.clear();
+        self.outputs
+            .extend(std::iter::repeat(0).take(pass.expected_outputs.len()));
         self.log_messages.clear();
     }
 
@@ -75,7 +75,7 @@ impl rustmatic_wasm::Environment for TestEnvironment {
         log::debug!("Writing {} bytes to output {:#x}", buffer.len(), address);
 
         let dest = self
-            .inputs
+            .outputs
             .get_mut(address..address + buffer.len())
             .ok_or(WasmError::AddressOutOfBounds)?;
         dest.copy_from_slice(buffer);

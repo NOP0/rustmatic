@@ -4,6 +4,7 @@ use std::{
     fs,
     path::{Path, PathBuf},
     process::Command,
+    time::Instant,
 };
 use tempfile::TempDir;
 
@@ -15,6 +16,8 @@ pub struct Compiler {
 
 impl Compiler {
     pub fn instantiate(&self, name: &str, src: &str) -> Result<Program, Error> {
+        let start = Instant::now();
+
         let wasm = compile_to_wasm(
             name,
             src,
@@ -23,8 +26,15 @@ impl Compiler {
         )
         .unwrap();
 
-        Program::load(name, &wasm)
-            .map_err(|e| anyhow::format_err!("WASM loading failed: {}", e))
+        let prog = Program::load(name, &wasm)
+            .map_err(|e| anyhow::format_err!("WASM loading failed: {}", e))?;
+        log::debug!(
+            "Compiled and instantiated \"{}\" in {:?}",
+            name,
+            start.elapsed()
+        );
+
+        Ok(prog)
     }
 }
 

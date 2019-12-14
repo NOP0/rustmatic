@@ -1,39 +1,57 @@
 {
     "passes": [
         {
-            "delta_time": "200ms",
+            "elapsed": "100ms",
             "inputs": [
-                0
-            ],
-            "expected_outputs": [
-                0
-            ]
-        },
-        {
-            "delta_time": "200ms",
-            "inputs": [
-                0
-            ],
-            "expected_outputs": [
-                0
-            ]
-        },
-        {
-            "delta_time": "200ms",
-            "inputs": [
-                0
+                4
             ],
             "expected_outputs": [
                 1
             ]
         },
         {
-            "delta_time": "200ms",
+            "elapsed": "200ms",
             "inputs": [
-                0
+                4
             ],
             "expected_outputs": [
                 1
+            ]
+        },
+        {
+            "elapsed": "300ms",
+            "inputs": [
+                4
+            ],
+            "expected_outputs": [
+                0
+            ]
+        },
+        {
+            "elapsed": "400ms",
+            "inputs": [
+                4
+            ],
+            "expected_outputs": [
+                0
+            ]
+        },
+        {
+            "elapsed": "600ms",
+            "inputs": [
+                4
+            ],
+            "expected_outputs": [
+                1
+            ]
+        },
+        {
+            "elapsed": "751ms",
+            "inputs": [
+                4
+            ],
+            "expected_outputs": [
+                0
             ]
         }
     ]
