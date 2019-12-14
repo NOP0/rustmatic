@@ -6,6 +6,9 @@
             ],
             "expected_outputs": [
                 0
+            ],
+            "expected_log_messages": [
+                "Polling"
             ]
         }
     ]

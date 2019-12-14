@@ -33,14 +33,30 @@ impl TestEnvironment {
             anyhow::bail!("{:?} != {:?}", self.outputs, pass.expected_outputs);
         }
 
+        // create a temporary set containing all log messages
+        let mut log_messages: Vec<_> = self
+            .log_messages
+            .iter()
+            .map(|(_, msg)| msg.clone())
+            .collect();
+
         for msg in &pass.expected_log_messages {
-            if !self
-                .log_messages
-                .iter()
-                .any(|(_, logged)| logged.contains(msg))
-            {
-                anyhow::bail!("Expected log message \"{}\"", msg);
+            match log_messages.iter().position(|logged| logged.contains(msg)) {
+                Some(position) => {
+                    // we've found the message, remove it from the list of
+                    // candidates and go to the next one.
+                    log_messages.remove(position);
+                },
+                None => anyhow::bail!(
+                    "Unable to find log message \"{}\" in {:?}",
+                    msg,
+                    self.log_messages
+                ),
             }
+        }
+
+        if !log_messages.is_empty() {
+            anyhow::bail!("Unexpected log messages: {:?}", log_messages);
         }
 
         Ok(())

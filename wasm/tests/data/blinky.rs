@@ -21,17 +21,10 @@ pub extern "C" fn poll() {
         assert_eq!(ret, WASM_SUCCESS);
 
         let now = Duration::new(secs, nanos);
-        iec_std::println!("Now: {:?}, Current state: {}", now, CURRENT_STATE);
 
         if now > NEXT_TOGGLE {
             // figure out we need to toggle again
-            let period = polling_period(INPUT_ADDRESS);
-            NEXT_TOGGLE += period;
-            iec_std::println!(
-                "Next toggle in {:?} at {:?}",
-                period,
-                NEXT_TOGGLE
-            );
+            NEXT_TOGGLE += polling_period(INPUT_ADDRESS);
             // and make sure we toggle
             CURRENT_STATE = !CURRENT_STATE;
         }
