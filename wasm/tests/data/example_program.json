@@ -1,12 +1,8 @@
 {
     "passes": [
         {
-            "inputs": [
-                0
-            ],
-            "expected_outputs": [
-                0
-            ],
+            "inputs": [],
+            "expected_outputs": [],
             "expected_log_messages": [
                 "Polling"
             ]

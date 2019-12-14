@@ -14,4 +14,3 @@ anyhow = "1"
 rustmatic-wasm = { path = "../wasm" }
 log = "0.4"
 tempfile = "3.1"
-humantime-serde = "0.1.1"
