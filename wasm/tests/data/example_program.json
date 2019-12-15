@@ -1,6 +1,7 @@
 {
     "passes": [
         {
+            "elapsed": "500ms",
             "inputs": [],
             "expected_outputs": [],
             "expected_log_messages": [
