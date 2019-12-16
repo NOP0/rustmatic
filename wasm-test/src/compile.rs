@@ -24,7 +24,7 @@ impl Compiler {
             &self.target_dir,
             &self.std_manifest_dir,
         )
-        .unwrap();
+        .context("Unable to compile the WASM")?;
 
         let prog = Program::load(name, &wasm)
             .map_err(|e| anyhow::format_err!("WASM loading failed: {}", e))?;
