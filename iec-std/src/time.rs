@@ -16,7 +16,8 @@ impl Instant {
         let mut nanos = 0;
 
         unsafe {
-            let ret = crate::intrinsics::current_time(&mut secs, &mut nanos);
+            let ret =
+                crate::intrinsics::wasm_current_time(&mut secs, &mut nanos);
             assert_eq!(ret, 0);
         }
 

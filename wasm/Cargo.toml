@@ -1,0 +1,18 @@
+[package]
+name = "rustmatic-wasm"
+version = "0.1.0"
+authors = ["Michael Bryan <michaelfbryan@gmail.com>"]
+edition = "2018"
+description = "Runtime support for executing WASM code as part of a process."
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+wasmer-runtime = "0.11"
+log = "0.4"
+thiserror = "1.0"
+
+[dev-dependencies]
+rustmatic-wasm-test = { path = "../wasm-test" }
+anyhow = "1.0"
+env_logger = "0.7.1"
