@@ -136,6 +136,7 @@ pub enum Type {
 pub struct Program {
     instance: Instance,
     name: String,
+    pub created_at: Instant,
 }
 
 impl Program {
@@ -163,6 +164,7 @@ impl Program {
         Ok(Program {
             instance,
             name: name.into(),
+            created_at: Instant::now(),
         })
     }
 

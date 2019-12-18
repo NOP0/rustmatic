@@ -105,12 +105,13 @@ impl Runtime {
 
 struct SystemEnvironment<'a>{
     system: &'a mut dyn System,
+    created_at: Instant,
 }
 
 impl Environment for SystemEnvironment<'_> {
 
     fn elapsed(&self) -> Result<Duration, Error> {
-        unimplemented!();
+        Ok(self.created_at.elapsed())
     }
 
     fn read_input(
@@ -151,7 +152,7 @@ pub struct WasmProcess{
 impl Process for WasmProcess{
      type Fault=Fault;
      fn poll(&mut self, system: &mut dyn System) -> Transition<Self::Fault>{
-          let mut system_environment = SystemEnvironment{system: system};
+          let mut system_environment = SystemEnvironment{system: system, created_at: self.program.created_at};
           let _ = self.program.poll(&mut system_environment);
           Transition::StillRunning
      }
