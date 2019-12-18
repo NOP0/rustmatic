@@ -4,8 +4,10 @@ use rustmatic_core::{
     DeviceManager, Process, ProcessImage, System, Transition, Value,
     VariableIndex,
 };
+use rustmatic_wasm::{Program as WasmProgram, Environment, Error, Value as WasmValue};
 use slotmap::DenseSlotMap;
-use std::{cell::RefCell, time::Instant};
+use std::{cell::RefCell, time::{Duration,Instant}};
+use log::{Level, Record};
 
 slotmap::new_key_type! {
     pub struct DeviceIndex;
@@ -99,6 +101,61 @@ impl Runtime {
         }
         Ok(())
     }
+}
+
+struct EnvAdapter<'a>{
+    system: &'a mut dyn System,
+}
+
+impl Environment for EnvAdapter<'_> {
+
+    fn elapsed(&self) -> Result<Duration, Error> {
+        unimplemented!();
+    }
+
+    fn read_input(
+        &self,
+        address: usize,
+        buffer: &mut [u8],
+    ) -> Result<(), Error>{
+        unimplemented!();
+    }
+
+    fn write_output(
+        &mut self,
+        address: usize,
+        buffer: &[u8],
+    ) -> Result<(), Error>{
+        unimplemented!();
+    }
+
+    fn log(&mut self, record: &Record<'_>) -> Result<(), Error>{
+        unimplemented!();
+    }
+
+    fn get_variable(&self, name: &str) -> Result<WasmValue, Error>{
+        unimplemented!();
+    }
+
+    fn set_variable(&mut self, name: &str, value: WasmValue) -> Result<(), Error>{
+        unimplemented!();
+    }
+
+
+}
+
+pub struct WasmProcess{
+    program: WasmProgram,
+}
+
+impl Process for WasmProcess{
+     type Fault=Fault;
+     fn poll(&mut self, system: &mut dyn System) -> Transition<Self::Fault>{
+          let mut env_adapter = EnvAdapter{system: system};
+          let _ = self.program.poll(&mut env_adapter);
+          Transition::StillRunning
+     }
+
 }
 
 /// Something went wrong...
