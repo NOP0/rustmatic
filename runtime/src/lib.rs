@@ -103,11 +103,11 @@ impl Runtime {
     }
 }
 
-struct EnvAdapter<'a>{
+struct SystemEnvironment<'a>{
     system: &'a mut dyn System,
 }
 
-impl Environment for EnvAdapter<'_> {
+impl Environment for SystemEnvironment<'_> {
 
     fn elapsed(&self) -> Result<Duration, Error> {
         unimplemented!();
@@ -151,8 +151,8 @@ pub struct WasmProcess{
 impl Process for WasmProcess{
      type Fault=Fault;
      fn poll(&mut self, system: &mut dyn System) -> Transition<Self::Fault>{
-          let mut env_adapter = EnvAdapter{system: system};
-          let _ = self.program.poll(&mut env_adapter);
+          let mut system_environment = SystemEnvironment{system: system};
+          let _ = self.program.poll(&mut system_environment);
           Transition::StillRunning
      }
 
