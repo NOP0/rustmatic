@@ -10,3 +10,4 @@ description = "A device which gives the Rustmatic PLC runtime access to the Linu
 [dependencies]
 sysfs_gpio = "0.5.4"
 rustmatic-core = { path = "../core" }
+rustmatic-runtime = { path = "../runtime" }
