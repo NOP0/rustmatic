@@ -506,15 +506,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "rustmatic"
-version = "0.1.0"
-dependencies = [
- "rustmatic-core 0.1.0",
- "rustmatic-dummy-input 0.1.0",
- "rustmatic-runtime 0.1.0",
-]
-
-[[package]]
 name = "rustmatic-core"
 version = "0.1.0"
 dependencies = [
