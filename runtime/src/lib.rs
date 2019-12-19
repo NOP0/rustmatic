@@ -160,7 +160,7 @@ impl WasmProcess {
 }
 
 impl Process for WasmProcess {
-    type Fault = Error;
+    type Fault = Fault;
 
     fn poll(&mut self, system: &mut dyn System) -> Transition<Self::Fault> {
         let mut system_environment = SystemEnvironment {
@@ -169,14 +169,17 @@ impl Process for WasmProcess {
         };
         match self.program.poll(&mut system_environment) {
             Ok(()) => Transition::StillRunning,
-            Err(e) => Transition::Fault(e),
+            Err(_) => Transition::Fault(Fault::WasmFault),
         }
     }
 }
 
 /// Something went wrong...
 #[derive(Debug, Copy, Clone, PartialEq)]
-pub enum Fault {}
+pub enum Fault {
+    GenericFault, 
+    WasmFault,
+}
 
 /// The interface a [`Process`] can use to interact with the [`Device<T>`]s
 /// known by our [`Runtime`].
