@@ -150,11 +150,13 @@ pub struct WasmProcess{
 }
 
 impl Process for WasmProcess{
-     type Fault=Fault;
+     type Fault=Error;
      fn poll(&mut self, system: &mut dyn System) -> Transition<Self::Fault>{
           let mut system_environment = SystemEnvironment{system: system, created_at: self.program.created_at};
-          let _ = self.program.poll(&mut system_environment);
-          Transition::StillRunning
+          match self.program.poll(&mut system_environment){
+              Ok(()) => Transition::StillRunning,
+              Err(e) => Transition::Fault(e),
+          }
      }
 
 }
