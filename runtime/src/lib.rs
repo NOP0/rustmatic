@@ -1,13 +1,18 @@
 //! The system in charge of working with IO and executing processes.
 
+use log::{Level, Record};
 use rustmatic_core::{
     DeviceManager, Process, ProcessImage, System, Transition, Value,
     VariableIndex,
 };
-use rustmatic_wasm::{Program as WasmProgram, Environment, Error, Value as WasmValue};
+use rustmatic_wasm::{
+    Environment, Error, Program as WasmProgram, Value as WasmValue,
+};
 use slotmap::DenseSlotMap;
-use std::{cell::RefCell, time::{Duration,Instant}};
-use log::{Level, Record};
+use std::{
+    cell::RefCell,
+    time::{Duration, Instant},
+};
 
 slotmap::new_key_type! {
     pub struct DeviceIndex;
@@ -103,13 +108,12 @@ impl Runtime {
     }
 }
 
-struct SystemEnvironment<'a>{
+struct SystemEnvironment<'a> {
     system: &'a mut dyn System,
     created_at: Instant,
 }
 
 impl Environment for SystemEnvironment<'_> {
-
     fn elapsed(&self) -> Result<Duration, Error> {
         Ok(self.created_at.elapsed())
     }
@@ -118,7 +122,7 @@ impl Environment for SystemEnvironment<'_> {
         &self,
         address: usize,
         buffer: &mut [u8],
-    ) -> Result<(), Error>{
+    ) -> Result<(), Error> {
         unimplemented!();
     }
 
@@ -126,39 +130,48 @@ impl Environment for SystemEnvironment<'_> {
         &mut self,
         address: usize,
         buffer: &[u8],
-    ) -> Result<(), Error>{
+    ) -> Result<(), Error> {
         unimplemented!();
     }
 
-    fn log(&mut self, record: &Record<'_>) -> Result<(), Error>{
+    fn log(&mut self, record: &Record<'_>) -> Result<(), Error> {
         unimplemented!();
     }
 
-    fn get_variable(&self, name: &str) -> Result<WasmValue, Error>{
+    fn get_variable(&self, name: &str) -> Result<WasmValue, Error> {
         unimplemented!();
     }
 
-    fn set_variable(&mut self, name: &str, value: WasmValue) -> Result<(), Error>{
+    fn set_variable(
+        &mut self,
+        name: &str,
+        value: WasmValue,
+    ) -> Result<(), Error> {
         unimplemented!();
     }
-
-
 }
 
-pub struct WasmProcess{
+pub struct WasmProcess {
     program: WasmProgram,
 }
 
-impl Process for WasmProcess{
-     type Fault=Error;
-     fn poll(&mut self, system: &mut dyn System) -> Transition<Self::Fault>{
-          let mut system_environment = SystemEnvironment{system: system, created_at: self.program.created_at};
-          match self.program.poll(&mut system_environment){
-              Ok(()) => Transition::StillRunning,
-              Err(e) => Transition::Fault(e),
-          }
-     }
+impl WasmProcess {
+    pub fn new(program: WasmProgram) -> WasmProcess { WasmProcess { program } }
+}
 
+impl Process for WasmProcess {
+    type Fault = Error;
+
+    fn poll(&mut self, system: &mut dyn System) -> Transition<Self::Fault> {
+        let mut system_environment = SystemEnvironment {
+            system,
+            created_at: self.program.created_at,
+        };
+        match self.program.poll(&mut system_environment) {
+            Ok(()) => Transition::StillRunning,
+            Err(e) => Transition::Fault(e),
+        }
+    }
 }
 
 /// Something went wrong...
