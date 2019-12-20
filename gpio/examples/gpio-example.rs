@@ -1,8 +1,8 @@
+use gpio_cdev::Chip;
 use rustmatic_core::{AccessType, Process, System, Transition};
-use rustmatic_runtime::{Fault, Runtime};
 use rustmatic_gpio::GpioPin;
+use rustmatic_runtime::{Fault, Runtime};
 use std::sync::Arc;
-use sysfs_gpio::Pin;
 
 struct PlcMain {
     cycle_counter: u64,
@@ -11,8 +11,7 @@ struct PlcMain {
 
 impl PlcMain {
     pub fn new(runtime: &mut Runtime) -> Self {
-
-        let my_gpio = GpioPin::input(Pin::new(17));
+        let my_gpio = GpioPin::input(Chip::new("/dev/gpiochip0").unwrap(), 4);
 
         // Register this input at offset %I4.0 in input Process Image
         runtime.inputs.register_input_device(
