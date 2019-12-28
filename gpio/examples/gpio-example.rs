@@ -11,7 +11,9 @@ struct PlcMain {
 
 impl PlcMain {
     pub fn new(runtime: &mut Runtime) -> Self {
-        let my_gpio = GpioPin::input(Chip::new("/dev/gpiochip0").unwrap(), 4);
+
+        // This example uses GPIO 21 on a Rasberry PI 2B. Adjust the GPIO number for your application.
+        let my_gpio = GpioPin::input(Chip::new("/dev/gpiochip0").unwrap(), 21);
 
         // Register this input at offset %I4.0 in input Process Image
         runtime.inputs.register_input_device(
@@ -49,6 +51,8 @@ impl Process for PlcMain {
 
         // Do something with them.
         println!("The value of my_bool is: {}", self.my_bool);
+
+        self.cycle_counter += 1;
 
         Transition::StillRunning
     }

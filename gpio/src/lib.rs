@@ -49,7 +49,7 @@ impl Device<bool> for GpioPin {
             .borrow_mut()
             .get_line(self.line)
             .map_err(|e| DeviceError::Other(Box::new(e)))?
-            .request(LineRequestFlags::INPUT, 1, "gpio_pin")
+            .request(LineRequestFlags::INPUT, 0, "gpio_pin")
             .map_err(|e| DeviceError::Other(Box::new(e)))?;
 
         match handle.get_value() {
