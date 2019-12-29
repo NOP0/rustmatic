@@ -23,6 +23,20 @@ impl PlcMain {
             runtime.devices.register(Arc::new(my_gpio)),
         );
 
+        // This example uses GPIO 20 on a Rasberry PI 2B. Adjust the GPIO number for your application.
+        let my_gpio = GpioPin::output(Chip::new("/dev/gpiochip0").unwrap(), 20);
+
+        // Register this input at offset %I4.0 in input Process Image
+        runtime.outputs.
+
+        runtime.inputs.register_input_device(
+            4,
+            0,
+            AccessType::Bit,
+            runtime.devices.register(Arc::new(my_gpio)),
+        );
+
+
         PlcMain {
             cycle_counter: 0,
             my_bool: false,
