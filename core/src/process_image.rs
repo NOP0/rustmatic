@@ -18,23 +18,31 @@ pub enum AccessType {
     DoubleWord,
 }
 
+pub enum Direction {
+    In,
+    Out,
+}
+
 pub struct ProcessImage {
     pub image: Vec<u8>,
     pub devices: Vec<(DeviceID, Address)>,
+    direction: Direction,
 }
 
 impl ProcessImage {
-    pub fn new() -> Self {
+    pub fn new(direction: Direction) -> Self {
         ProcessImage {
-            image: vec![0;PI_LENGTH],
+            image: vec![0; PI_LENGTH],
             devices: Vec::new(),
+            direction,
         }
     }
 
-    pub fn with_capacity(capacity: usize) -> Self {
+    pub fn with_capacity(capacity: usize, direction: Direction) -> Self {
         ProcessImage {
-            image: vec![0;capacity],
+            image: vec![0; capacity],
             devices: Vec::new(),
+            direction,
         }
     }
 
@@ -74,7 +82,7 @@ impl ProcessImage {
         LittleEndian::write_u32(&mut self.image[dword..dword + 4], state);
     }
 
-    pub fn register_input_device(
+    pub fn register_device(
         &mut self,
         byte: usize,
         bit: usize,
@@ -84,29 +92,71 @@ impl ProcessImage {
         self.devices.push((device, Address { byte, bit, type_of }));
     }
 
-    pub fn update_inputs(&mut self, devices: &DeviceManager) {
+    pub fn update(&mut self, devices: &DeviceManager) {
         let devices_vec: Vec<(DeviceID, Address)> = self.devices.clone();
 
-        for device in devices_vec {
-            match device.1.type_of {
-                AccessType::Bit => self.write_bit(
-                    device.1.byte,
-                    device.1.bit,
-                    devices.read::<bool>(device.0).unwrap(),
-                ),
-                AccessType::Byte => self.write_byte(
-                    device.1.byte,
-                    devices.read::<u8>(device.0).unwrap(),
-                ),
-                AccessType::Word => self.write_word(
-                    device.1.byte,
-                    devices.read::<u16>(device.0).unwrap(),
-                ),
-                AccessType::DoubleWord => self.write_double_word(
-                    device.1.byte,
-                    devices.read::<u32>(device.0).unwrap(),
-                ),
-            }
+        match self.direction {
+            Direction::In => {
+                for device in devices_vec {
+                    match device.1.type_of {
+                        AccessType::Bit => self.write_bit(
+                            device.1.byte,
+                            device.1.bit,
+                            devices.read::<bool>(device.0).unwrap(),
+                        ),
+                        AccessType::Byte => self.write_byte(
+                            device.1.byte,
+                            devices.read::<u8>(device.0).unwrap(),
+                        ),
+                        AccessType::Word => self.write_word(
+                            device.1.byte,
+                            devices.read::<u16>(device.0).unwrap(),
+                        ),
+                        AccessType::DoubleWord => self.write_double_word(
+                            device.1.byte,
+                            devices.read::<u32>(device.0).unwrap(),
+                        ),
+                    }
+                }
+            },
+            Direction::Out => {
+                for device in devices_vec {
+                    match device.1.type_of {
+                        AccessType::Bit => {
+                            (devices
+                                .write::<bool>(
+                                    device.0,
+                                    self.read_bit(device.1.byte, device.1.bit),
+                                )
+                                .unwrap())
+                        },
+                        AccessType::Byte => {
+                            (devices
+                                .write::<u8>(
+                                    device.0,
+                                    self.read_byte(device.1.byte),
+                                )
+                                .unwrap())
+                        },
+                        AccessType::Word => {
+                            (devices
+                                .write::<u16>(
+                                    device.0,
+                                    self.read_word(device.1.byte),
+                                )
+                                .unwrap())
+                        },
+                        AccessType::DoubleWord => {
+                            (devices
+                                .write::<u32>(
+                                    device.0,
+                                    self.read_double_word(device.1.byte),
+                                )
+                                .unwrap())
+                        },
+                    }
+                }
+            },
         }
     }
 }
