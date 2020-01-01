@@ -7,7 +7,7 @@ mod process_image;
 pub use crate::{
     device::{Device, DeviceError},
     device_manager::{DeviceManager, Devices},
-    process_image::{AccessType, Address, ProcessImage, Direction},
+    process_image::{AccessType, Address, Direction, ProcessImage},
 };
 
 use std::time::Instant;

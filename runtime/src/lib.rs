@@ -1,7 +1,7 @@
 //! The system in charge of working with IO and executing processes.
 
 use rustmatic_core::{
-    DeviceManager, Process, ProcessImage, System, Transition, Value,
+    DeviceManager, Direction, Process, ProcessImage, System, Transition, Value,
     VariableIndex,
 };
 use slotmap::DenseSlotMap;
@@ -29,8 +29,8 @@ impl Runtime {
     pub fn new() -> Self {
         Runtime {
             devices: DeviceManager::new(),
-            inputs: ProcessImage::new(),
-            outputs: ProcessImage::new(),
+            inputs: ProcessImage::new(Direction::In),
+            outputs: ProcessImage::new(Direction::Out),
             processes: Processes::with_key(),
             variables: Variables::with_key(),
         }
@@ -58,7 +58,7 @@ impl Runtime {
         let mut to_remove = Vec::new();
         let mut faults = Vec::new();
 
-        self.inputs.update_inputs(&mut self.devices);
+        self.inputs.update(&mut self.devices);
 
         for (pid, process) in &mut self.processes {
             // set up the device context
@@ -78,6 +78,8 @@ impl Runtime {
                 },
             }
         }
+
+        self.outputs.update(&mut self.devices);
 
         // remove all finished processes
         self.processes.retain(|pid, _| !to_remove.contains(&pid));

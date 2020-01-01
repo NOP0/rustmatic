@@ -15,7 +15,7 @@ impl PlcMain {
         let my_bool_input = DummyBool::new();
 
         // Register this input at offset %I4.0 in input Process Image
-        runtime.inputs.register_input_device(
+        runtime.inputs.register_device(
             4,
             0,
             AccessType::Bit,
@@ -26,7 +26,7 @@ impl PlcMain {
         let my_double_word_input = DummyDoubleWord::new();
 
         // Register this input at offset %ID8 in input Process Image
-        runtime.inputs.register_input_device(
+        runtime.inputs.register_device(
             8,
             0,
             AccessType::DoubleWord,
