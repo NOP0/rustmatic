@@ -61,7 +61,6 @@ impl Device<bool> for GpioPin {
     }
 
     fn write(&self, new_state: bool) -> Result<(), DeviceError> {
-
         let handle = self
             .chip
             .borrow_mut()
@@ -70,18 +69,16 @@ impl Device<bool> for GpioPin {
             .request(LineRequestFlags::OUTPUT, 0, "gpio_pin")
             .map_err(|e| DeviceError::Other(Box::new(e)))?;
 
-        let value = if new_state { 1 } else { 0 };    
-
+        let value = if new_state { 1 } else { 0 };
         match handle.set_value(value) {
             Ok(()) => Ok(()),
             Err(e) => Err(DeviceError::Other(Box::new(e))),
-            }
+        }
     }
-
 }
 
 impl Display for GpioPin {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-                write!(f, "Linux GPIO pin {}", self.line)
+        write!(f, "Linux GPIO pin {}", self.line)
     }
 }

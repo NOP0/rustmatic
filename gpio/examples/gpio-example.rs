@@ -2,44 +2,45 @@ use gpio_cdev::Chip;
 use rustmatic_core::{AccessType, Process, System, Transition};
 use rustmatic_gpio::GpioPin;
 use rustmatic_runtime::{Fault, Runtime};
-use std::sync::Arc;
+use std::{sync::Arc, time::Instant};
 
 struct PlcMain {
     cycle_counter: u64,
     my_bool: bool,
+    created: Instant,
 }
 
 impl PlcMain {
     pub fn new(runtime: &mut Runtime) -> Self {
-
-        // This example uses GPIO 21 on a Rasberry PI 2B. Adjust the GPIO number for your application.
+        // This example uses GPIO 21 on a Rasberry PI 2B. Adjust the GPIO number
+        // for your application.
         let my_gpio = GpioPin::input(Chip::new("/dev/gpiochip0").unwrap(), 21);
 
         // Register this input at offset %I4.0 in input Process Image
-        runtime.inputs.register_input_device(
+        runtime.inputs.register_device(
             4,
             0,
             AccessType::Bit,
             runtime.devices.register(Arc::new(my_gpio)),
         );
 
-        // This example uses GPIO 20 on a Rasberry PI 2B. Adjust the GPIO number for your application.
-        let my_gpio = GpioPin::output(Chip::new("/dev/gpiochip0").unwrap(), 20);
+        // This example uses GPIO 20 on a Rasberry PI 2B. Adjust the GPIO number
+        // for your application.
+        let my_gpio_2 =
+            GpioPin::output(Chip::new("/dev/gpiochip0").unwrap(), 20);
 
-        // Register this input at offset %I4.0 in input Process Image
-        runtime.outputs.
-
-        runtime.inputs.register_input_device(
+        // Register this output at offset %Q4.0 in input Process Image
+        runtime.outputs.register_device(
             4,
             0,
             AccessType::Bit,
-            runtime.devices.register(Arc::new(my_gpio)),
+            runtime.devices.register(Arc::new(my_gpio_2)),
         );
-
 
         PlcMain {
             cycle_counter: 0,
             my_bool: false,
+            created: Instant::now(),
         }
     }
 }
@@ -56,14 +57,24 @@ impl Process for PlcMain {
     fn poll(&mut self, system: &mut dyn System) -> Transition<Self::Fault> {
         println!("PlcMain running cycle #{}", self.cycle_counter);
 
-        // Read all inputs
         {
             let inputs = system.inputs();
 
             self.my_bool = inputs.read_bit(4, 0);
         }
 
-        // Do something with them.
+        {
+            let outputs = system.outputs();
+
+            let elapsed = self.created.elapsed().as_secs();
+
+            if elapsed % 5 != 0 {
+                outputs.write_bit(4, 0, false);
+            } else {
+                outputs.write_bit(4, 0, true);
+            }
+        }
+
         println!("The value of my_bool is: {}", self.my_bool);
 
         self.cycle_counter += 1;
