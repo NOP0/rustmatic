@@ -25,7 +25,7 @@ use crate::parser::{RawParser, Rule};
 use pest::Parser as _;
 
 /// Parse a string of *Structured Text*.
-pub fn parse(src: &str) -> Result<(), ParseError> {
+pub fn parse(src: &str) -> Result<File, ParseError> {
     let _p = RawParser::parse(Rule::program, src)?;
 
     unimplemented!()
