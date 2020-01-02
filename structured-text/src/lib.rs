@@ -21,12 +21,5 @@ pub mod parser;
 
 pub use crate::{ast::*, error::ParseError};
 
-use crate::parser::{RawParser, Rule};
-use pest::Parser as _;
-
 /// Parse a string of *Structured Text*.
-pub fn parse(src: &str) -> Result<File, ParseError> {
-    let _p = RawParser::parse(Rule::program, src)?;
-
-    unimplemented!()
-}
+pub fn parse(src: &str) -> Result<File, ParseError> { src.parse() }

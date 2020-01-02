@@ -27,7 +27,46 @@ fn preamble(pair: Pair<'_, Rule>) -> Result<Vec<VarBlock>, ParseError> {
 )]
 pub struct File {
     pub functions: Vec<Function>,
+    pub programs: Vec<Program>,
+    pub function_blocks: Vec<FunctionBlock>,
     pub span: Span,
+}
+
+impl File {
+    fn from_pair(pair: Pair<'_, Rule>) -> Result<File, ParseError> {
+        let span = to_span(pair.as_span());
+
+        let mut functions = Vec::new();
+        let mut function_blocks = Vec::new();
+        let mut programs = Vec::new();
+
+        for sub_pair in pair.into_inner() {
+            match sub_pair.as_rule() {
+                Rule::function => {
+                    functions.push(Function::from_pair(sub_pair)?);
+                },
+                Rule::function_block => {
+                    function_blocks.push(FunctionBlock::from_pair(sub_pair)?);
+                },
+                Rule::program => {
+                    programs.push(Program::from_pair(sub_pair)?);
+                },
+                _ => {
+                    return Err(ParseError::expected_one_of(
+                        &[Rule::function, Rule::function_block, Rule::program],
+                        sub_pair.as_span(),
+                    ))
+                },
+            }
+        }
+
+        Ok(File {
+            functions,
+            function_blocks,
+            programs,
+            span,
+        })
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -369,12 +408,11 @@ impl Block {
 )]
 pub enum Statement {
     Assignment(Assignment),
+    Repeat(Repeat),
 }
 
 impl Statement {
     fn from_pair(pair: Pair<'_, Rule>) -> Result<Statement, ParseError> {
-        if pair.as_rule() == Rule::statement {}
-
         match pair.as_rule() {
             Rule::statement => {
                 Statement::from_pair(pair.into_inner().next().unwrap())
@@ -382,7 +420,11 @@ impl Statement {
             Rule::assignment => {
                 Ok(Statement::Assignment(Assignment::from_pair(pair)?))
             },
-            _ => unimplemented!(),
+            Rule::repeat => Ok(Statement::Repeat(Repeat::from_pair(pair)?)),
+            _ => Err(ParseError::expected_one_of(
+                &[Rule::assignment, Rule::repeat, Rule::statement],
+                pair.as_span(),
+            )),
         }
     }
 }
@@ -474,8 +516,15 @@ impl BinaryOp {
             Rule::multiply => Ok(BinaryOp::Multiply),
             Rule::divide => Ok(BinaryOp::Divide),
             Rule::equal => Ok(BinaryOp::Equals),
-            _ => Err(ParseError::custom(
-                "Unknown binary operator",
+
+            _ => Err(ParseError::expected_one_of(
+                &[
+                    Rule::plus,
+                    Rule::minus,
+                    Rule::multiply,
+                    Rule::divide,
+                    Rule::equal,
+                ],
                 pair.as_span(),
             )),
         }
@@ -739,23 +788,24 @@ macro_rules! impl_from_str {
 }
 
 impl_from_str! {
-    Identifier => identifier,
     Assignment => assignment,
-    VariableDeclaration => variable_decl,
-    Expression => expression,
-    BinaryOp => binary_operator,
     BinaryExpression => infix,
-    FloatLiteral => float,
-    IntegerLiteral => integer,
+    BinaryOp => binary_operator,
     BooleanLiteral => boolean,
-    Statement => statement,
-    Repeat => repeat,
-    VarBlock => var_block,
-    VarBlockKind => var_block_kind,
-    Program => program,
+    Conditional => conditional,
+    Expression => expression,
+    File => file,
+    FloatLiteral => float,
     Function => function,
     FunctionBlock => function_block,
-    Conditional => conditional,
+    Identifier => identifier,
+    IntegerLiteral => integer,
+    Program => program,
+    Repeat => repeat,
+    Statement => statement,
+    VarBlock => var_block,
+    VarBlockKind => var_block_kind,
+    VariableDeclaration => variable_decl,
 }
 
 #[cfg(test)]

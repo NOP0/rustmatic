@@ -114,7 +114,7 @@ pub struct ScopeRef(pub Entity);
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub enum Symbol {
-    /// A [`VariableDeclaration`] defined in this scope.
+    /// A variable defined in this scope.
     LocalVariable(Entity),
     /// A global [`Function`].
     Function(Entity),

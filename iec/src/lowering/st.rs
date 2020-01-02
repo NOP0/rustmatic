@@ -271,6 +271,8 @@ mod tests {
             "add",
             "Should have been named"
         );
+
+        // check the function signature
         let function = state.functions.get(function_ent).unwrap();
         assert_eq!(
             function.local_variables.len(),
