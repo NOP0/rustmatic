@@ -64,6 +64,18 @@ impl Scope {
         }
     }
 
+    /// Tries to look up a [`Symbol`] by name in the symbol table.
+    pub fn lookup(&self, name: &str) -> Option<Symbol> {
+        self.symbol_table.get(name).copied().or_else(|| {
+            // fall back to a case insensitive search
+            let name = name.to_lowercase();
+            self.symbol_table
+                .iter()
+                .find(|(key, _)| key.to_lowercase() == name)
+                .map(|(_, &symbol)| symbol)
+        })
+    }
+
     /// Tries to add a [`Symbol`] to the [`Scope`]'s symbol table, erroring if
     /// a [`Symbol`] with that name already exists.
     pub fn add_symbol(
@@ -106,11 +118,15 @@ pub enum Symbol {
     LocalVariable(Entity),
     /// A global [`Function`].
     Function(Entity),
+    /// A [`Type`].
+    Type(Entity),
 }
 impl Symbol {
     pub fn entity(self) -> Entity {
         match self {
-            Symbol::LocalVariable(e) | Symbol::Function(e) => e,
+            Symbol::LocalVariable(e)
+            | Symbol::Type(e)
+            | Symbol::Function(e) => e,
         }
     }
 
@@ -118,6 +134,7 @@ impl Symbol {
         match self {
             Symbol::LocalVariable(_) => "variable",
             Symbol::Function(_) => "function",
+            Symbol::Type(_) => "typr",
         }
     }
 }

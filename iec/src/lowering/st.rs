@@ -1,7 +1,8 @@
 use crate::{
     lowering::CompilationUnit,
     mir::{
-        DuplicateSymbolError, Function, Location, Name, Scope, ScopeRef, Symbol,
+        DuplicateSymbolError, Function, HasType, Location, Name, Scope,
+        ScopeRef, Symbol,
     },
     Diagnostics,
 };
@@ -47,6 +48,7 @@ struct State<'world> {
     names: WriteStorage<'world, Name>,
     scopes: WriteStorage<'world, Scope>,
     scope_refs: WriteStorage<'world, ScopeRef>,
+    has_type: WriteStorage<'world, HasType>,
 }
 
 /// Temporary state used while lowering.
@@ -56,56 +58,8 @@ struct Lower<'world, 'diag> {
     global_scope: Entity,
 }
 
+/// Lowering functions.
 impl<'world, 'diag> Lower<'world, 'diag> {
-    fn add_global(
-        &mut self,
-        name: &str,
-        item: Symbol,
-        decl_site: Location,
-    ) -> Result<(), DuplicateSymbolError> {
-        self.try_add_to_scope(self.global_scope, name, item, decl_site)
-    }
-
-    fn try_add_to_scope(
-        &mut self,
-        scope: Entity,
-        name: &str,
-        item: Symbol,
-        decl_site: Location,
-    ) -> Result<(), DuplicateSymbolError> {
-        let scope = self
-            .state
-            .scopes
-            .get_mut(scope)
-            .expect("The global scope always exists");
-
-        let got = scope.add_symbol(name.to_string(), item);
-
-        if let Err(ref e) = got {
-            let primary_label = Label::new(
-                decl_site.file,
-                decl_site.span,
-                "Duplicate declared here",
-            );
-            let mut diag = Diagnostic::new_error(e.to_string(), primary_label);
-
-            // try to emit a hint with the original item's declaration
-            if let Some(original_location) =
-                self.state.locations.get(e.original.entity())
-            {
-                diag.secondary_labels.push(Label::new(
-                    original_location.file,
-                    original_location.span,
-                    "Original declared here",
-                ));
-            }
-
-            self.diags.push(diag);
-        }
-
-        got
-    }
-
     fn lower_file(&mut self, id: FileId, ast: &syntax::File) {
         for function in &ast.functions {
             self.lower_function(id, function);
@@ -130,15 +84,137 @@ impl<'world, 'diag> Lower<'world, 'diag> {
             .with(function, &mut self.state.functions)
             .build();
 
-        let _ = self.add_global(name, Symbol::Function(ent), location);
+        self.add_global(name, Symbol::Function(ent), location);
     }
 
     fn resolve_var_blocks(
         &mut self,
-        _id: FileId,
-        _blocks: &[syntax::VarBlock],
+        file_id: FileId,
+        blocks: &[syntax::VarBlock],
     ) -> Function {
-        unimplemented!()
+        let mut local_variables = Vec::new();
+        let mut return_types = Vec::new();
+        let mut parameters = Vec::new();
+
+        for block in blocks {
+            let dest = match block.kind {
+                syntax::VarBlockKind::Input => &mut parameters,
+                syntax::VarBlockKind::Output => &mut return_types,
+                syntax::VarBlockKind::Normal => &mut local_variables,
+                _ => unimplemented!(),
+            };
+
+            for decl in &block.declarations {
+                let name = Name(decl.name.value.to_string());
+                let location = Location {
+                    file: file_id,
+                    span: decl.name.span,
+                };
+
+                let ty = match self
+                    .lookup_symbol(&decl.declared_type.value, self.global_scope)
+                {
+                    Some(Symbol::Type(ty)) => HasType { ty },
+                    Some(_other) => unimplemented!(),
+                    None => unimplemented!(),
+                };
+
+                let ent = self
+                    .state
+                    .entities
+                    .build_entity()
+                    .with(name, &mut self.state.names)
+                    .with(location, &mut self.state.locations)
+                    .with(ty, &mut self.state.has_type)
+                    .build();
+
+                dest.push(ent);
+            }
+        }
+
+        Function {
+            local_variables,
+            return_types,
+            parameters,
+        }
+    }
+}
+
+/// Helpers.
+impl<'world, 'diag> Lower<'world, 'diag> {
+    fn lookup_symbol(
+        &self,
+        name: &str,
+        current_scope: Entity,
+    ) -> Option<Symbol> {
+        let mut current_scope = Some(current_scope);
+
+        while let Some(scope) = current_scope {
+            let scope = self
+                .state
+                .scopes
+                .get(scope)
+                .expect("This entity should be a scope");
+
+            if let Some(got) = scope.lookup(name) {
+                return Some(got);
+            }
+
+            current_scope = scope.parent;
+        }
+
+        None
+    }
+
+    fn add_global(&mut self, name: &str, item: Symbol, decl_site: Location) {
+        self.add_to_scope(self.global_scope, name, item, decl_site)
+    }
+
+    fn add_to_scope(
+        &mut self,
+        scope: Entity,
+        name: &str,
+        item: Symbol,
+        decl_site: Location,
+    ) {
+        let scope = self
+            .state
+            .scopes
+            .get_mut(scope)
+            .expect("The global scope always exists");
+
+        if let Err(e) = scope.add_symbol(name.to_string(), item) {
+            self.emit_duplicate_symbol_error(&e, decl_site);
+        }
+    }
+}
+
+/// Diagnostics.
+impl<'world, 'diag> Lower<'world, 'diag> {
+    fn emit_duplicate_symbol_error(
+        &mut self,
+        e: &DuplicateSymbolError,
+        decl_site: Location,
+    ) {
+        let primary_label = Label::new(
+            decl_site.file,
+            decl_site.span,
+            "Duplicate declared here",
+        );
+        let mut diag = Diagnostic::new_error(e.to_string(), primary_label);
+
+        // try to emit a hint with the original item's declaration
+        if let Some(original_location) =
+            self.state.locations.get(e.original.entity())
+        {
+            diag.secondary_labels.push(Label::new(
+                original_location.file,
+                original_location.span,
+                "Original declared here",
+            ));
+        }
+
+        self.diags.push(diag);
     }
 }
 
@@ -201,8 +277,12 @@ mod tests {
             2,
             "It accepts two parameters"
         );
-        assert_eq!(state.names.get(function.local_variables[0]).unwrap(), "a");
-        assert_eq!(state.names.get(function.local_variables[1]).unwrap(), "b");
+        let a = function.local_variables[0];
+        assert_eq!(state.names.get(a).unwrap(), "a");
+        assert!(state.locations.contains(a));
+        let b = function.local_variables[1];
+        assert_eq!(state.names.get(b).unwrap(), "b");
+        assert!(state.locations.contains(b));
         assert_eq!(function.return_types.len(), 1, "It has one return value");
     }
 }
