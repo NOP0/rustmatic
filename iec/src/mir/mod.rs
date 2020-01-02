@@ -14,7 +14,7 @@ pub fn register(world: &mut World) {
     world.register::<Location>();
     world.register::<Scope>();
     world.register::<ScopeRef>();
-    world.register::<VariableDeclaration>();
+    world.register::<HasType>();
     world.register::<Type>();
     world.register::<Function>();
 }
@@ -22,9 +22,8 @@ pub fn register(world: &mut World) {
 #[derive(Debug, Clone, PartialEq, Component)]
 #[storage(VecStorage)]
 pub struct Function {
-    /// The [`VariableDeclaration`]s associated with this function.
-    pub variables: Vec<Entity>,
-    pub return_type: Option<Entity>,
+    pub local_variables: Vec<Entity>,
+    pub return_types: Vec<Entity>,
     pub parameters: Vec<Entity>,
 }
 
@@ -123,10 +122,11 @@ impl Symbol {
     }
 }
 
+/// Something which has a [`Type`] as resolved by the type system.
 #[derive(Debug, Clone, PartialEq, Component)]
 #[storage(DenseVecStorage)]
-pub struct VariableDeclaration {
-    pub decl_type: Entity,
+pub struct HasType {
+    pub ty: Entity,
 }
 
 #[derive(Debug, Clone, PartialEq, Component)]

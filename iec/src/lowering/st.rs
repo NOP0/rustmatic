@@ -11,7 +11,7 @@ use rustmatic_structured_text as syntax;
 use shred_derive::SystemData;
 use specs::prelude::*;
 
-/// Lower a set of *Structured Text* files into a [`Configuration`].
+/// Lower a set of *Structured Text* files into a [`CompilationUnit`].
 pub fn lower<I>(
     items: I,
     world: &mut World,
@@ -37,6 +37,8 @@ where
     CompilationUnit { global_scope }
 }
 
+/// Helper struct containing the various components we'll need during the
+/// lowering process.
 #[derive(SystemData)]
 struct State<'world> {
     entities: Entities<'world>,
@@ -47,6 +49,7 @@ struct State<'world> {
     scope_refs: WriteStorage<'world, ScopeRef>,
 }
 
+/// Temporary state used while lowering.
 struct Lower<'world, 'diag> {
     state: State<'world>,
     diags: &'diag mut Diagnostics,
@@ -84,7 +87,18 @@ impl<'world, 'diag> Lower<'world, 'diag> {
                 decl_site.span,
                 "Duplicate declared here",
             );
-            let diag = Diagnostic::new_error(e.to_string(), primary_label);
+            let mut diag = Diagnostic::new_error(e.to_string(), primary_label);
+
+            // try to emit a hint with the original item's declaration
+            if let Some(original_location) =
+                self.state.locations.get(e.original.entity())
+            {
+                diag.secondary_labels.push(Label::new(
+                    original_location.file,
+                    original_location.span,
+                    "Original declared here",
+                ));
+            }
 
             self.diags.push(diag);
         }
@@ -104,6 +118,7 @@ impl<'world, 'diag> Lower<'world, 'diag> {
             file: id,
             span: function.span,
         };
+        let function = self.resolve_var_blocks(id, &function.var_blocks);
 
         let ent = self
             .state
@@ -112,10 +127,25 @@ impl<'world, 'diag> Lower<'world, 'diag> {
             .with(Name(name.to_string()), &mut self.state.names)
             .with(location.clone(), &mut self.state.locations)
             .with(ScopeRef(self.global_scope), &mut self.state.scope_refs)
+            .with(function, &mut self.state.functions)
             .build();
 
         let _ = self.add_global(name, Symbol::Function(ent), location);
     }
+
+    fn resolve_var_blocks(
+        &mut self,
+        _id: FileId,
+        _blocks: &[syntax::VarBlock],
+    ) -> Function {
+        unimplemented!()
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+struct Variables {
+    input_parameters: Vec<Entity>,
+    output_parameters: Vec<Entity>,
 }
 
 #[cfg(test)]
@@ -166,9 +196,13 @@ mod tests {
             "Should have been named"
         );
         let function = state.functions.get(function_ent).unwrap();
-        assert_eq!(function.variables.len(), 2, "It accepts two parameters");
-        assert_eq!(state.names.get(function.variables[0]).unwrap(), "a");
-        assert_eq!(state.names.get(function.variables[1]).unwrap(), "b");
-        assert!(function.return_type.is_some(), "It has a return type");
+        assert_eq!(
+            function.local_variables.len(),
+            2,
+            "It accepts two parameters"
+        );
+        assert_eq!(state.names.get(function.local_variables[0]).unwrap(), "a");
+        assert_eq!(state.names.get(function.local_variables[1]).unwrap(), "b");
+        assert_eq!(function.return_types.len(), 1, "It has one return value");
     }
 }
