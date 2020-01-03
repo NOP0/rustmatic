@@ -1,3 +1,5 @@
+use crate::mir::Location;
+use codespan::FileId;
 use codespan_reporting::diagnostic::{Diagnostic, Severity};
 
 #[derive(Debug, Default, Clone)]
@@ -21,4 +23,31 @@ impl Diagnostics {
     }
 
     pub fn push(&mut self, diag: Diagnostic) { self.diags.push(diag); }
+}
+
+/// Something which has a location in the source code.
+pub trait HasLocation {
+    fn loc(&self, file_id: FileId) -> Location;
+}
+
+macro_rules! impl_has_location {
+    ($( $type:ty ),* $(,)?) => {
+        $(
+            impl HasLocation for $type {
+                fn loc(&self, file_id: FileId) -> Location {
+                    Location {
+                        file: file_id,
+                        span: self.span,
+                    }
+                }
+            }
+        )*
+    };
+}
+
+impl_has_location! {
+    rustmatic_structured_text::Identifier,
+    rustmatic_structured_text::Function,
+    rustmatic_structured_text::FunctionBlock,
+    rustmatic_structured_text::Program,
 }

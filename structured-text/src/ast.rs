@@ -3,7 +3,10 @@ use crate::{
     ParseError,
 };
 use codespan::Span;
-use pest::{iterators::Pair, Parser};
+use pest::{
+    iterators::{Pair, Pairs},
+    Parser,
+};
 use std::str::FromStr;
 
 #[cfg(test)]
@@ -29,32 +32,30 @@ pub struct File {
     pub functions: Vec<Function>,
     pub programs: Vec<Program>,
     pub function_blocks: Vec<FunctionBlock>,
-    pub span: Span,
 }
 
 impl File {
-    fn from_pair(pair: Pair<'_, Rule>) -> Result<File, ParseError> {
-        let span = to_span(pair.as_span());
-
+    fn from_pairs(pairs: Pairs<'_, Rule>) -> Result<File, ParseError> {
         let mut functions = Vec::new();
         let mut function_blocks = Vec::new();
         let mut programs = Vec::new();
 
-        for sub_pair in pair.into_inner() {
-            match sub_pair.as_rule() {
+        for pair in pairs {
+            match pair.as_rule() {
                 Rule::function => {
-                    functions.push(Function::from_pair(sub_pair)?);
+                    functions.push(Function::from_pair(pair)?);
                 },
                 Rule::function_block => {
-                    function_blocks.push(FunctionBlock::from_pair(sub_pair)?);
+                    function_blocks.push(FunctionBlock::from_pair(pair)?);
                 },
                 Rule::program => {
-                    programs.push(Program::from_pair(sub_pair)?);
+                    programs.push(Program::from_pair(pair)?);
                 },
+                Rule::EOI => {},
                 _ => {
                     return Err(ParseError::expected_one_of(
                         &[Rule::function, Rule::function_block, Rule::program],
-                        sub_pair.as_span(),
+                        pair.as_span(),
                     ))
                 },
             }
@@ -64,8 +65,15 @@ impl File {
             functions,
             function_blocks,
             programs,
-            span,
         })
+    }
+}
+
+impl FromStr for File {
+    type Err = ParseError;
+
+    fn from_str(src: &str) -> Result<File, ParseError> {
+        File::from_pairs(RawParser::parse(Rule::file, src)?)
     }
 }
 
@@ -794,7 +802,6 @@ impl_from_str! {
     BooleanLiteral => boolean,
     Conditional => conditional,
     Expression => expression,
-    File => file,
     FloatLiteral => float,
     Function => function,
     FunctionBlock => function_block,

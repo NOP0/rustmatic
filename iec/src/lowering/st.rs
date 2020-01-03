@@ -2,8 +2,9 @@ use crate::{
     lowering::CompilationUnit,
     mir::{
         DuplicateSymbolError, Function, HasType, Location, Name, Scope,
-        ScopeRef, Symbol,
+        ScopeRef, Symbol, Type,
     },
+    utils::HasLocation,
     Diagnostics,
 };
 use codespan::FileId;
@@ -23,7 +24,7 @@ where
 {
     crate::mir::register(world);
 
-    let global_scope = world.create_entity().with(Scope::root()).build();
+    let global_scope = create_global_scope(world);
 
     let mut lower = Lower {
         state: world.system_data(),
@@ -36,6 +37,25 @@ where
     }
 
     CompilationUnit { global_scope }
+}
+
+/// Create the global [`Scope`] and populate it with various builtin types.
+fn create_global_scope(world: &mut World) -> Entity {
+    let mut scope = Scope::empty();
+
+    let int = world
+        .create_entity()
+        .with(Name(String::from("INT")))
+        .with(Type::Integer {
+            signed: true,
+            bit_width: 32,
+        })
+        .build();
+    scope
+        .add_symbol("INT".to_string(), Symbol::Type(int))
+        .unwrap();
+
+    world.create_entity().with(scope).build()
 }
 
 /// Helper struct containing the various components we'll need during the
@@ -67,12 +87,26 @@ impl<'world, 'diag> Lower<'world, 'diag> {
     }
 
     fn lower_function(&mut self, id: FileId, function: &syntax::Function) {
+        let current_scope = self.global_scope;
         let name = &function.name.value;
-        let location = Location {
-            file: id,
-            span: function.span,
+        let location = function.loc(id);
+        let Variables {
+            local_variables,
+            parameters,
+        } = self.resolve_var_blocks(id, &function.var_blocks);
+        let return_type = match self.get_type_by_name(
+            &function.return_type.value,
+            current_scope,
+            function.return_type.loc(id),
+        ) {
+            Ok(t) => t,
+            Err(_) => return,
         };
-        let function = self.resolve_var_blocks(id, &function.var_blocks);
+        let function = Function {
+            local_variables,
+            parameters,
+            return_type,
+        };
 
         let ent = self
             .state
@@ -80,7 +114,7 @@ impl<'world, 'diag> Lower<'world, 'diag> {
             .build_entity()
             .with(Name(name.to_string()), &mut self.state.names)
             .with(location.clone(), &mut self.state.locations)
-            .with(ScopeRef(self.global_scope), &mut self.state.scope_refs)
+            .with(ScopeRef(current_scope), &mut self.state.scope_refs)
             .with(function, &mut self.state.functions)
             .build();
 
@@ -91,7 +125,7 @@ impl<'world, 'diag> Lower<'world, 'diag> {
         &mut self,
         file_id: FileId,
         blocks: &[syntax::VarBlock],
-    ) -> Function {
+    ) -> Variables {
         let mut local_variables = Vec::new();
         let mut return_types = Vec::new();
         let mut parameters = Vec::new();
@@ -111,12 +145,16 @@ impl<'world, 'diag> Lower<'world, 'diag> {
                     span: decl.name.span,
                 };
 
-                let ty = match self
-                    .lookup_symbol(&decl.declared_type.value, self.global_scope)
-                {
-                    Some(Symbol::Type(ty)) => HasType { ty },
-                    Some(_other) => unimplemented!(),
-                    None => unimplemented!(),
+                let ty = match self.get_type_by_name(
+                    &decl.declared_type.value,
+                    self.global_scope,
+                    location,
+                ) {
+                    Ok(ty) => HasType { ty },
+                    Err(diag) => {
+                        self.diags.push(diag);
+                        continue;
+                    },
                 };
 
                 let ent = self
@@ -132,16 +170,38 @@ impl<'world, 'diag> Lower<'world, 'diag> {
             }
         }
 
-        Function {
+        Variables {
             local_variables,
-            return_types,
             parameters,
         }
     }
 }
 
+struct Variables {
+    local_variables: Vec<Entity>,
+    parameters: Vec<Entity>,
+}
+
 /// Helpers.
 impl<'world, 'diag> Lower<'world, 'diag> {
+    fn get_type_by_name(
+        &self,
+        name: &str,
+        current_scope: Entity,
+        usage_site: Location,
+    ) -> Result<Entity, Diagnostic> {
+        match self.lookup_symbol(name, current_scope) {
+            Some(Symbol::Type(t)) => Ok(t),
+            Some(other) => Err(self.incorrect_symbol_type(
+                name,
+                usage_site,
+                Symbol::TYPE,
+                other,
+            )),
+            None => unimplemented!(),
+        }
+    }
+
     fn lookup_symbol(
         &self,
         name: &str,
@@ -196,6 +256,21 @@ impl<'world, 'diag> Lower<'world, 'diag> {
         e: &DuplicateSymbolError,
         decl_site: Location,
     ) {
+        self.diags.push(self.duplicate_symbol_error(e, decl_site));
+    }
+
+    /// Try to get a hint with the original item's declaration.
+    fn originally_declared_here(&self, item: Entity) -> Option<Label> {
+        self.state.locations.get(item).map(|location| {
+            Label::new(location.file, location.span, "Originally declared here")
+        })
+    }
+
+    fn duplicate_symbol_error(
+        &self,
+        e: &DuplicateSymbolError,
+        decl_site: Location,
+    ) -> Diagnostic {
         let primary_label = Label::new(
             decl_site.file,
             decl_site.span,
@@ -203,25 +278,40 @@ impl<'world, 'diag> Lower<'world, 'diag> {
         );
         let mut diag = Diagnostic::new_error(e.to_string(), primary_label);
 
-        // try to emit a hint with the original item's declaration
-        if let Some(original_location) =
-            self.state.locations.get(e.original.entity())
+        if let Some(label) = self.originally_declared_here(e.original.entity())
         {
-            diag.secondary_labels.push(Label::new(
-                original_location.file,
-                original_location.span,
-                "Original declared here",
-            ));
+            diag.secondary_labels.push(label);
         }
 
-        self.diags.push(diag);
+        diag
     }
-}
 
-#[derive(Debug, Clone, PartialEq)]
-struct Variables {
-    input_parameters: Vec<Entity>,
-    output_parameters: Vec<Entity>,
+    fn incorrect_symbol_type(
+        &self,
+        name: &str,
+        usage_site: Location,
+        expected: &'static str,
+        actual: Symbol,
+    ) -> Diagnostic {
+        let primary_label =
+            Label::new(usage_site.file, usage_site.span, "Used here");
+
+        let mut diag = Diagnostic::new_error(
+            format!(
+                "Tried to use \"{}\" as a {} but it is a {}",
+                name,
+                expected,
+                actual.description(),
+            ),
+            primary_label,
+        );
+
+        if let Some(label) = self.originally_declared_here(actual.entity()) {
+            diag.secondary_labels.push(label);
+        }
+
+        diag
+    }
 }
 
 #[cfg(test)]
@@ -231,20 +321,16 @@ mod tests {
     use codespan_reporting::diagnostic::Severity;
 
     #[test]
-    #[ignore]
     fn lower_valid_file() {
         let src = r#"
-        FUNCTION add
+        FUNCTION add: INT
             VAR_INPUT
                 a: INT;
                 b: INT;
             END_VAR
-            VAR_OUTPUT
-                result: INT;
-            END_VAR
 
-            result := a + b;
-        END_FUNCTION
+            add := a + b;
+        END_FUNCTION;
         "#;
         let mut files = Files::new();
         let file_id = files.add("main", src);
@@ -254,12 +340,11 @@ mod tests {
 
         let got = lower(vec![(file_id, parsed)], &mut world, &mut diagnostics);
 
-        assert_eq!(diagnostics.at_least(Severity::Warning).count(), 0);
+        assert!(diagnostics.diagnostics().is_empty());
         let state: State = world.system_data();
 
         // make sure the function was defined
         let global_scope = state.scopes.get(got.global_scope).unwrap();
-        assert_eq!(global_scope.symbol_table.len(), 1);
         assert!(global_scope.symbol_table.contains_key("add"));
 
         // we expect certain information about the function to exist
@@ -274,17 +359,24 @@ mod tests {
 
         // check the function signature
         let function = state.functions.get(function_ent).unwrap();
-        assert_eq!(
-            function.local_variables.len(),
-            2,
-            "It accepts two parameters"
-        );
-        let a = function.local_variables[0];
+        assert_eq!(function.parameters.len(), 2, "It accepts two parameters");
+        let int = global_scope.lookup("INT").unwrap().entity();
+        let a = function.parameters[0];
         assert_eq!(state.names.get(a).unwrap(), "a");
-        assert!(state.locations.contains(a));
-        let b = function.local_variables[1];
+        assert!(state.locations.contains(a), "a has a location");
+        assert_eq!(
+            state.has_type.get(a).unwrap(),
+            &HasType { ty: int },
+            "a is an int"
+        );
+        let b = function.parameters[1];
         assert_eq!(state.names.get(b).unwrap(), "b");
-        assert!(state.locations.contains(b));
-        assert_eq!(function.return_types.len(), 1, "It has one return value");
+        assert!(state.locations.contains(b), "b has a location");
+        assert_eq!(
+            state.has_type.get(b).unwrap(),
+            &HasType { ty: int },
+            "b is an int"
+        );
+        assert_eq!(function.return_type, int, "It returns an INT");
     }
 }

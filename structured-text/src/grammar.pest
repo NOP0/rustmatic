@@ -1,4 +1,4 @@
-file = { (program | function_block | function)* }
+file = _{ SOI ~ (program | function_block | function)* ~ EOI }
 
 program = { ^"program" ~ identifier ~ preamble ~ block ~ ^"end_program" ~ ";"? }
 function_block = {
@@ -21,10 +21,10 @@ global_var_block            = { ^"var_global" }
 external_var_block          = { ^"var_external" }
 input_var_block             = { ^"var_input" }
 output_var_block            = { ^"var_output" }
-inout_var_block             = { ^"var_in_out "}
+inout_var_block             = { ^"var_in_out"}
 
 block                       = { statement* }
-statement                   = { (assignment| repeat) ~ ";" }
+statement                   = { (assignment | repeat) ~ ";" }
 assignment                  = { identifier ~ assign ~ expression }
 
 repeat                      = { ^"repeat" ~ repeat_body ~ ^"end_repeat" }

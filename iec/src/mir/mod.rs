@@ -23,7 +23,7 @@ pub fn register(world: &mut World) {
 #[storage(VecStorage)]
 pub struct Function {
     pub local_variables: Vec<Entity>,
-    pub return_types: Vec<Entity>,
+    pub return_type: Entity,
     pub parameters: Vec<Entity>,
 }
 
@@ -41,7 +41,7 @@ where
 }
 
 /// Where an item is defined within source code.
-#[derive(Debug, Clone, PartialEq, Component)]
+#[derive(Debug, Copy, Clone, PartialEq, Component)]
 #[storage(VecStorage)]
 pub struct Location {
     pub span: Span,
@@ -56,8 +56,8 @@ pub struct Scope {
 }
 
 impl Scope {
-    /// Create a root scope.
-    pub fn root() -> Scope {
+    /// Create an empty root scope.
+    pub fn empty() -> Scope {
         Scope {
             parent: None,
             symbol_table: BTreeMap::new(),
@@ -122,6 +122,10 @@ pub enum Symbol {
     Type(Entity),
 }
 impl Symbol {
+    pub const FUNCTION: &'static str = "function";
+    pub const LOCAL_VARIABLE: &'static str = "variable";
+    pub const TYPE: &'static str = "type";
+
     pub fn entity(self) -> Entity {
         match self {
             Symbol::LocalVariable(e)
@@ -132,21 +136,21 @@ impl Symbol {
 
     pub fn description(self) -> &'static str {
         match self {
-            Symbol::LocalVariable(_) => "variable",
-            Symbol::Function(_) => "function",
-            Symbol::Type(_) => "typr",
+            Symbol::LocalVariable(_) => Self::LOCAL_VARIABLE,
+            Symbol::Function(_) => Self::FUNCTION,
+            Symbol::Type(_) => Self::TYPE,
         }
     }
 }
 
 /// Something which has a [`Type`] as resolved by the type system.
-#[derive(Debug, Clone, PartialEq, Component)]
+#[derive(Debug, Copy, Clone, PartialEq, Component)]
 #[storage(DenseVecStorage)]
 pub struct HasType {
     pub ty: Entity,
 }
 
-#[derive(Debug, Clone, PartialEq, Component)]
+#[derive(Debug, Copy, Clone, PartialEq, Component)]
 #[storage(HashMapStorage)]
 pub enum Type {
     Integer { signed: bool, bit_width: usize },
