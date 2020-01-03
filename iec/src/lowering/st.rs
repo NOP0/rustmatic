@@ -33,6 +33,7 @@ where
     };
 
     for (id, file) in items {
+        log::debug!("Lowering file with {:?}", id);
         lower.lower_file(id, &file);
     }
 
@@ -54,6 +55,8 @@ fn create_global_scope(world: &mut World) -> Entity {
     scope
         .add_symbol("INT".to_string(), Symbol::Type(int))
         .unwrap();
+
+    log::debug!("Created the global scope: {:#?}", scope);
 
     world.create_entity().with(scope).build()
 }
@@ -90,17 +93,23 @@ impl<'world, 'diag> Lower<'world, 'diag> {
         let current_scope = self.global_scope;
         let name = &function.name.value;
         let location = function.loc(id);
+        log::debug!("Lowering function \"{}\" at {:?}", name, location);
+
         let Variables {
             local_variables,
             parameters,
         } = self.resolve_var_blocks(id, &function.var_blocks);
+        let return_ident = &function.return_type;
         let return_type = match self.get_type_by_name(
-            &function.return_type.value,
+            &return_ident.value,
             current_scope,
-            function.return_type.loc(id),
+            return_ident.loc(id),
         ) {
             Ok(t) => t,
-            Err(_) => return,
+            Err(diag) => {
+                self.diags.push(diag);
+                return;
+            },
         };
         let function = Function {
             local_variables,
@@ -139,34 +148,9 @@ impl<'world, 'diag> Lower<'world, 'diag> {
             };
 
             for decl in &block.declarations {
-                let name = Name(decl.name.value.to_string());
-                let location = Location {
-                    file: file_id,
-                    span: decl.name.span,
-                };
-
-                let ty = match self.get_type_by_name(
-                    &decl.declared_type.value,
-                    self.global_scope,
-                    location,
-                ) {
-                    Ok(ty) => HasType { ty },
-                    Err(diag) => {
-                        self.diags.push(diag);
-                        continue;
-                    },
-                };
-
-                let ent = self
-                    .state
-                    .entities
-                    .build_entity()
-                    .with(name, &mut self.state.names)
-                    .with(location, &mut self.state.locations)
-                    .with(ty, &mut self.state.has_type)
-                    .build();
-
-                dest.push(ent);
+                if let Some(ent) = self.resolve_var(file_id, decl) {
+                    dest.push(ent);
+                }
             }
         }
 
@@ -174,6 +158,41 @@ impl<'world, 'diag> Lower<'world, 'diag> {
             local_variables,
             parameters,
         }
+    }
+
+    fn resolve_var(
+        &mut self,
+        file_id: FileId,
+        decl: &syntax::VariableDeclaration,
+    ) -> Option<Entity> {
+        let name = Name(decl.name.value.to_string());
+        let location = Location {
+            file: file_id,
+            span: decl.name.span,
+        };
+
+        let ty = match self.get_type_by_name(
+            &decl.declared_type.value,
+            self.global_scope,
+            location,
+        ) {
+            Ok(ty) => HasType { ty },
+            Err(diag) => {
+                self.diags.push(diag);
+                return None;
+            },
+        };
+
+        let ent = self
+            .state
+            .entities
+            .build_entity()
+            .with(name, &mut self.state.names)
+            .with(location, &mut self.state.locations)
+            .with(ty, &mut self.state.has_type)
+            .build();
+
+        Some(ent)
     }
 }
 
@@ -318,7 +337,6 @@ impl<'world, 'diag> Lower<'world, 'diag> {
 mod tests {
     use super::*;
     use codespan::Files;
-    use codespan_reporting::diagnostic::Severity;
 
     #[test]
     fn lower_valid_file() {

@@ -957,6 +957,7 @@ version = "0.1.0"
 dependencies = [
  "codespan",
  "codespan-reporting",
+ "log",
  "rustmatic-structured-text",
  "shred-derive",
  "specs",
