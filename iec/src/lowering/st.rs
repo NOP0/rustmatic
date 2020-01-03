@@ -95,26 +95,16 @@ impl<'world, 'diag> Lower<'world, 'diag> {
         let location = function.loc(id);
         log::debug!("Lowering function \"{}\" at {:?}", name, location);
 
-        let Variables {
-            local_variables,
-            parameters,
-        } = self.resolve_var_blocks(id, &function.var_blocks);
-        let return_ident = &function.return_type;
-        let return_type = match self.get_type_by_name(
-            &return_ident.value,
+        let signature = match self.resolve_function_signature(
+            id,
+            function,
             current_scope,
-            return_ident.loc(id),
         ) {
-            Ok(t) => t,
-            Err(diag) => {
-                self.diags.push(diag);
+            Ok(sig) => sig,
+            Err(diags) => {
+                self.diags.extend(diags);
                 return;
             },
-        };
-        let function = Function {
-            local_variables,
-            parameters,
-            return_type,
         };
 
         let ent = self
@@ -124,20 +114,60 @@ impl<'world, 'diag> Lower<'world, 'diag> {
             .with(Name(name.to_string()), &mut self.state.names)
             .with(location.clone(), &mut self.state.locations)
             .with(ScopeRef(current_scope), &mut self.state.scope_refs)
-            .with(function, &mut self.state.functions)
+            .with(signature, &mut self.state.functions)
             .build();
 
         self.add_global(name, Symbol::Function(ent), location);
+    }
+
+    fn resolve_function_signature(
+        &mut self,
+        id: FileId,
+        function: &syntax::Function,
+        current_scope: Entity,
+    ) -> Result<Function, Vec<Diagnostic>> {
+        let variables = self.resolve_var_blocks(id, &function.var_blocks);
+
+        let return_ident = &function.return_type;
+        let return_type = self.get_type_by_name(
+            &return_ident.value,
+            current_scope,
+            return_ident.loc(id),
+        );
+
+        // we need to do this funny dance because we want *all* function
+        // signature errors to be emitted, not just the first like you'd get
+        // using "?"
+        match (variables, return_type) {
+            (
+                Ok(Variables {
+                    local_variables,
+                    parameters,
+                }),
+                Ok(return_type),
+            ) => Ok(Function {
+                local_variables,
+                parameters,
+                return_type,
+            }),
+            (Err(var_err), Ok(_)) => Err(var_err),
+            (Ok(_), Err(ret_err)) => Err(vec![ret_err]),
+            (Err(mut var_errors), Err(ret_err)) => {
+                var_errors.push(ret_err);
+                Err(var_errors)
+            },
+        }
     }
 
     fn resolve_var_blocks(
         &mut self,
         file_id: FileId,
         blocks: &[syntax::VarBlock],
-    ) -> Variables {
+    ) -> Result<Variables, Vec<Diagnostic>> {
         let mut local_variables = Vec::new();
         let mut return_types = Vec::new();
         let mut parameters = Vec::new();
+        let mut diags = Vec::new();
 
         for block in blocks {
             let dest = match block.kind {
@@ -148,15 +178,20 @@ impl<'world, 'diag> Lower<'world, 'diag> {
             };
 
             for decl in &block.declarations {
-                if let Some(ent) = self.resolve_var(file_id, decl) {
-                    dest.push(ent);
+                match self.resolve_var(file_id, decl) {
+                    Ok(var) => dest.push(var),
+                    Err(diag) => diags.push(diag),
                 }
             }
         }
 
-        Variables {
-            local_variables,
-            parameters,
+        if diags.is_empty() {
+            Ok(Variables {
+                local_variables,
+                parameters,
+            })
+        } else {
+            Err(diags)
         }
     }
 
@@ -164,24 +199,18 @@ impl<'world, 'diag> Lower<'world, 'diag> {
         &mut self,
         file_id: FileId,
         decl: &syntax::VariableDeclaration,
-    ) -> Option<Entity> {
+    ) -> Result<Entity, Diagnostic> {
         let name = Name(decl.name.value.to_string());
         let location = Location {
             file: file_id,
             span: decl.name.span,
         };
 
-        let ty = match self.get_type_by_name(
+        let ty = self.get_type_by_name(
             &decl.declared_type.value,
             self.global_scope,
             location,
-        ) {
-            Ok(ty) => HasType { ty },
-            Err(diag) => {
-                self.diags.push(diag);
-                return None;
-            },
-        };
+        )?;
 
         let ent = self
             .state
@@ -189,10 +218,10 @@ impl<'world, 'diag> Lower<'world, 'diag> {
             .build_entity()
             .with(name, &mut self.state.names)
             .with(location, &mut self.state.locations)
-            .with(ty, &mut self.state.has_type)
+            .with(HasType { ty }, &mut self.state.has_type)
             .build();
 
-        Some(ent)
+        Ok(ent)
     }
 }
 

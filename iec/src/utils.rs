@@ -25,6 +25,12 @@ impl Diagnostics {
     pub fn push(&mut self, diag: Diagnostic) { self.diags.push(diag); }
 }
 
+impl Extend<Diagnostic> for Diagnostics {
+    fn extend<I: IntoIterator<Item = Diagnostic>>(&mut self, items: I) {
+        self.diags.extend(items);
+    }
+}
+
 /// Something which has a location in the source code.
 pub trait HasLocation {
     fn loc(&self, file_id: FileId) -> Location;
