@@ -135,7 +135,8 @@ impl Environment for SystemEnvironment<'_> {
     }
 
     fn log(&mut self, record: &Record<'_>) -> Result<(), Error> {
-        unimplemented!();
+        println!("Logging!"); // TODO
+        Ok(())
     }
 
     fn get_variable(&self, name: &str) -> Result<WasmValue, Error> {

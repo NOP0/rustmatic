@@ -3,11 +3,9 @@ use rustmatic_iec_std::intrinsics::{
     self, wasm_log_level_LOG_INFO as LOG_INFO,
     wasm_result_t_WASM_SUCCESS as WASM_SUCCESS,
 };
-use rustmatic_core::System;
-use rustmatic_wasm::Environment;
 
 #[no_mangle]
-pub extern "C" fn poll(env: &mut dyn Environment) {
+pub extern "C" fn poll() {
     unsafe {
         let file = file!();
         let msg = "Polling\n";

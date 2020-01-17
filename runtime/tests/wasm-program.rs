@@ -16,8 +16,6 @@ fn wasm_poll(){
 
     let wasm: Program = compiler.instantiate("test_program", &source).unwrap();
 
-    //let program = Program::load("basic-runtime", &wasm).unwrap();
-
     let mut runtime = Runtime::new();
 
     let wasm_process = WasmProcess::new(wasm);
