@@ -13,3 +13,6 @@ rustmatic-wasm = { path = "../wasm" }
 slotmap = "0.4.0"
 anymap = "0.12.1"
 log = "0.4"
+
+[dev-dependencies]
+rustmatic-wasm-test = { path = "../wasm-test" }

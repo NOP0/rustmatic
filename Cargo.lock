@@ -984,6 +984,7 @@ dependencies = [
  "log",
  "rustmatic-core",
  "rustmatic-wasm",
+ "rustmatic-wasm-test",
  "slotmap",
 ]
 
