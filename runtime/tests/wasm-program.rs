@@ -24,7 +24,5 @@ fn wasm_poll(){
 
     runtime.init().expect("Could not init runtime");
 
-    while runtime.iter_processes().count() > 0 {
-        let _ = runtime.poll();
+    let _ = runtime.poll();
     }
-}

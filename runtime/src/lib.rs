@@ -135,7 +135,7 @@ impl Environment for SystemEnvironment<'_> {
     }
 
     fn log(&mut self, record: &Record<'_>) -> Result<(), Error> {
-        println!("Logging!"); // TODO
+        println!("{}", record.args());
         Ok(())
     }
 
