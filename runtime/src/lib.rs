@@ -1,6 +1,6 @@
 //! The system in charge of working with IO and executing processes.
 
-use log::{Record};
+use log::Record;
 use rustmatic_core::{
     DeviceManager, Process, ProcessImage, System, Transition, Value,
     VariableIndex,
@@ -11,8 +11,8 @@ use rustmatic_wasm::{
 use slotmap::DenseSlotMap;
 use std::{
     cell::RefCell,
-    time::{Duration, Instant},
     io::Write,
+    time::{Duration, Instant},
 };
 
 slotmap::new_key_type! {
@@ -183,7 +183,7 @@ impl Process for WasmProcess {
 /// Something went wrong...
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub enum Fault {
-    GenericFault, 
+    GenericFault,
     WasmFault,
 }
 
