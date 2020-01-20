@@ -1,6 +1,6 @@
 //! The system in charge of working with IO and executing processes.
 
-use log::{Level, Record};
+use log::{Record};
 use rustmatic_core::{
     DeviceManager, Process, ProcessImage, System, Transition, Value,
     VariableIndex,
@@ -12,6 +12,7 @@ use slotmap::DenseSlotMap;
 use std::{
     cell::RefCell,
     time::{Duration, Instant},
+    io::Write,
 };
 
 slotmap::new_key_type! {
@@ -29,6 +30,7 @@ pub struct Runtime {
     pub outputs: ProcessImage,
     pub(crate) processes: Processes,
     pub(crate) variables: Variables,
+    pub logger: Box<dyn Write>,
 }
 
 impl Runtime {
@@ -40,6 +42,7 @@ impl Runtime {
             outputs: ProcessImage::new(),
             processes: Processes::with_key(),
             variables: Variables::with_key(),
+            logger: Box::new(std::io::stdout()),
         }
     }
 
@@ -75,6 +78,7 @@ impl Runtime {
                 outputs: &mut self.outputs,
                 current_process: pid,
                 variables: RefCell::new(&mut self.variables),
+                logger: &mut self.logger,
             };
 
             match process.poll(&mut ctx) {
@@ -101,6 +105,7 @@ impl Runtime {
                 outputs: &mut self.outputs,
                 current_process: pid,
                 variables: RefCell::new(&mut self.variables),
+                logger: &mut self.logger,
             };
             process.init(&mut ctx)?;
         }
@@ -135,7 +140,7 @@ impl Environment for SystemEnvironment<'_> {
     }
 
     fn log(&mut self, record: &Record<'_>) -> Result<(), Error> {
-        println!("{}", record.args());
+        self.system.log(&record);
         Ok(())
     }
 
@@ -190,6 +195,7 @@ struct Context<'a> {
     outputs: &'a mut ProcessImage,
     variables: RefCell<&'a mut Variables>,
     current_process: ProcessIndex,
+    logger: &'a mut Box<dyn Write>,
 }
 
 impl<'a> System for Context<'a> {
@@ -228,6 +234,11 @@ impl<'a> System for Context<'a> {
     fn inputs(&mut self) -> &mut ProcessImage { self.inputs }
 
     fn outputs(&mut self) -> &mut ProcessImage { self.outputs }
+
+    fn log(&mut self, record: &Record) {
+        write!(self.logger, "{}", record.args());
+        // TODO Return result. Wrap error in box?
+    }
 }
 
 /// A [`Variable`] is some value that can be accessed by different parts of the

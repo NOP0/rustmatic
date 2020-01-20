@@ -15,7 +15,7 @@ fn wasm_poll(){
         .expect("Something went wrong reading the file");
 
     let wasm: Program = compiler.instantiate("test_program", &source).unwrap();
-
+    
     let mut runtime = Runtime::new();
 
     let wasm_process = WasmProcess::new(wasm);
@@ -25,4 +25,5 @@ fn wasm_poll(){
     runtime.init().expect("Could not init runtime");
 
     let _ = runtime.poll();
+    
     }
