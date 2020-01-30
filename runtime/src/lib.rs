@@ -1,11 +1,19 @@
 //! The system in charge of working with IO and executing processes.
 
+use log::Record;
 use rustmatic_core::{
     DeviceManager, Process, ProcessImage, System, Transition, Value,
     VariableIndex,
 };
+use rustmatic_wasm::{
+    Environment, Error, Program as WasmProgram, Value as WasmValue,
+};
 use slotmap::DenseSlotMap;
-use std::{cell::RefCell, time::Instant};
+use std::{
+    cell::RefCell,
+    io::Write,
+    time::{Duration, Instant},
+};
 
 slotmap::new_key_type! {
     pub struct DeviceIndex;
@@ -22,6 +30,7 @@ pub struct Runtime {
     pub outputs: ProcessImage,
     pub(crate) processes: Processes,
     pub(crate) variables: Variables,
+    pub logger: Box<dyn Write>,
 }
 
 impl Runtime {
@@ -33,6 +42,7 @@ impl Runtime {
             outputs: ProcessImage::new(),
             processes: Processes::with_key(),
             variables: Variables::with_key(),
+            logger: Box::new(std::io::stdout()),
         }
     }
 
@@ -68,6 +78,7 @@ impl Runtime {
                 outputs: &mut self.outputs,
                 current_process: pid,
                 variables: RefCell::new(&mut self.variables),
+                logger: &mut self.logger,
             };
 
             match process.poll(&mut ctx) {
@@ -94,6 +105,7 @@ impl Runtime {
                 outputs: &mut self.outputs,
                 current_process: pid,
                 variables: RefCell::new(&mut self.variables),
+                logger: &mut self.logger,
             };
             process.init(&mut ctx)?;
         }
@@ -101,9 +113,79 @@ impl Runtime {
     }
 }
 
+struct SystemEnvironment<'a> {
+    system: &'a mut dyn System,
+    created_at: Instant,
+}
+
+impl Environment for SystemEnvironment<'_> {
+    fn elapsed(&self) -> Result<Duration, Error> {
+        Ok(self.created_at.elapsed())
+    }
+
+    fn read_input(
+        &self,
+        address: usize,
+        buffer: &mut [u8],
+    ) -> Result<(), Error> {
+        unimplemented!();
+    }
+
+    fn write_output(
+        &mut self,
+        address: usize,
+        buffer: &[u8],
+    ) -> Result<(), Error> {
+        unimplemented!();
+    }
+
+    fn log(&mut self, record: &Record<'_>) -> Result<(), Error> {
+        self.system.log(&record);
+        Ok(())
+    }
+
+    fn get_variable(&self, name: &str) -> Result<WasmValue, Error> {
+        unimplemented!();
+    }
+
+    fn set_variable(
+        &mut self,
+        name: &str,
+        value: WasmValue,
+    ) -> Result<(), Error> {
+        unimplemented!();
+    }
+}
+
+pub struct WasmProcess {
+    program: WasmProgram,
+}
+
+impl WasmProcess {
+    pub fn new(program: WasmProgram) -> WasmProcess { WasmProcess { program } }
+}
+
+impl Process for WasmProcess {
+    type Fault = Fault;
+
+    fn poll(&mut self, system: &mut dyn System) -> Transition<Self::Fault> {
+        let mut system_environment = SystemEnvironment {
+            system,
+            created_at: self.program.created_at,
+        };
+        match self.program.poll(&mut system_environment) {
+            Ok(()) => Transition::StillRunning,
+            Err(_) => Transition::Fault(Fault::WasmFault),
+        }
+    }
+}
+
 /// Something went wrong...
 #[derive(Debug, Copy, Clone, PartialEq)]
-pub enum Fault {}
+pub enum Fault {
+    GenericFault,
+    WasmFault,
+}
 
 /// The interface a [`Process`] can use to interact with the [`Device<T>`]s
 /// known by our [`Runtime`].
@@ -113,6 +195,7 @@ struct Context<'a> {
     outputs: &'a mut ProcessImage,
     variables: RefCell<&'a mut Variables>,
     current_process: ProcessIndex,
+    logger: &'a mut Box<dyn Write>,
 }
 
 impl<'a> System for Context<'a> {
@@ -151,6 +234,11 @@ impl<'a> System for Context<'a> {
     fn inputs(&mut self) -> &mut ProcessImage { self.inputs }
 
     fn outputs(&mut self) -> &mut ProcessImage { self.outputs }
+
+    fn log(&mut self, record: &Record) {
+        write!(self.logger, "{}", record.args());
+        // TODO Return result. Wrap error in box?
+    }
 }
 
 /// A [`Variable`] is some value that can be accessed by different parts of the

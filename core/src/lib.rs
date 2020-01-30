@@ -11,6 +11,7 @@ pub use crate::{
 };
 
 use std::time::Instant;
+use log::{Record};
 
 /// The interface exposed to a [`Process`] so it can interact with the outside
 /// world.
@@ -37,6 +38,7 @@ pub trait System {
 
     fn inputs(&mut self) -> &mut ProcessImage;
     fn outputs(&mut self) -> &mut ProcessImage;
+    fn log(&mut self, record: &Record);
 }
 
 slotmap::new_key_type! {

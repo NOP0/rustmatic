@@ -939,6 +939,7 @@ version = "0.1.0"
 dependencies = [
  "anymap",
  "byteorder",
+ "log",
  "slotmap",
 ]
 
@@ -971,7 +972,10 @@ name = "rustmatic-runtime"
 version = "0.1.0"
 dependencies = [
  "anymap",
+ "log",
  "rustmatic-core",
+ "rustmatic-wasm",
+ "rustmatic-wasm-test",
  "rustmatic-dummy-input",
  "slotmap",
 ]
