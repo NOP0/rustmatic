@@ -183,12 +183,23 @@ dependencies = [
 
 [[package]]
 name = "codespan"
-version = "0.5.0"
+version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "de67bdcd653002a6dba3eb53850ce3a485547225d81cb6c2bbdbc5a0cba5d15d"
+checksum = "58f7f9ca94d30f5717f356d178ca2854f4136dc15ed2f35bed0a4c6d7a1817b7"
 dependencies = [
  "serde",
  "unicode-segmentation",
+]
+
+[[package]]
+name = "codespan-reporting"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a515fe686cafbd92add3ee4c78b191d3f042eb82d2180fcca00f5637e3d62ec9"
+dependencies = [
+ "codespan",
+ "termcolor",
+ "unicode-width",
 ]
 
 [[package]]
@@ -925,15 +936,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "rustmatic"
-version = "0.1.0"
-dependencies = [
- "rustmatic-core",
- "rustmatic-dummy-input",
- "rustmatic-runtime",
-]
-
-[[package]]
 name = "rustmatic-core"
 version = "0.1.0"
 dependencies = [
@@ -955,9 +957,13 @@ name = "rustmatic-iec"
 version = "0.1.0"
 dependencies = [
  "codespan",
+ "codespan-reporting",
+ "log",
  "rustmatic-structured-text",
+ "shred-derive",
  "specs",
  "specs-derive",
+ "thiserror",
 ]
 
 [[package]]
@@ -1118,6 +1124,17 @@ dependencies = [
  "mopa",
  "rayon",
  "smallvec",
+]
+
+[[package]]
+name = "shred-derive"
+version = "0.6.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8c245c03fd923292ae18e01eadf65606fdc995c175433104ef3eee956db7c2d7"
+dependencies = [
+ "proc-macro2 0.4.30",
+ "quote 0.6.13",
+ "syn 0.15.44",
 ]
 
 [[package]]
@@ -1289,6 +1306,12 @@ name = "unicode-segmentation"
 version = "1.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e83e153d1053cbb5a118eeff7fd5be06ed99153f00dbcd8ae310c5fb2b22edc0"
+
+[[package]]
+name = "unicode-width"
+version = "0.1.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "caaa9d531767d1ff2150b9332433f32a24622147e5ebb1f26409d5da67afd479"
 
 [[package]]
 name = "unicode-xid"

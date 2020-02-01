@@ -9,6 +9,10 @@ description = "An IEC 61131-3 compiler for the rustmatic runtime."
 
 [dependencies]
 rustmatic-structured-text = { path = "../structured-text" }
-specs = "0.15.1"
-specs-derive = "0.4.0"
-codespan = "0.5.0"
+specs = "0.15"
+specs-derive = "0.4"
+codespan = "0.6"
+shred-derive = "0.6"
+codespan-reporting = "0.6"
+thiserror = "1.0"
+log = "0.4.8"

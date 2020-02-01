@@ -1,4 +1,4 @@
-file = { SOI ~ (program | function_block)* ~ EOI }
+file = _{ SOI ~ (program | function_block | function)* ~ EOI }
 
 program = { ^"program" ~ identifier ~ preamble ~ block ~ ^"end_program" ~ ";"? }
 function_block = {
@@ -12,19 +12,19 @@ preamble = { var_block* }
 
 var_block                   = { var_block_kind ~ (variable_decl ~ ";")* ~ ^"end_var" }
 variable_decl               = { identifier ~ ":" ~ identifier ~ (assign ~ expression)? }
-var_block_kind = _{ 
+var_block_kind = _{
     global_var_block | external_var_block | input_var_block | output_var_block | inout_var_block |
-    normal_var_block 
+    normal_var_block
 }
 normal_var_block            = { ^"var" }
 global_var_block            = { ^"var_global" }
 external_var_block          = { ^"var_external" }
 input_var_block             = { ^"var_input" }
 output_var_block            = { ^"var_output" }
-inout_var_block             = { ^"var_in_out "}
+inout_var_block             = { ^"var_in_out"}
 
 block                       = { statement* }
-statement                   = { (assignment| repeat) ~ ";" }
+statement                   = { (assignment | repeat) ~ ";" }
 assignment                  = { identifier ~ assign ~ expression }
 
 repeat                      = { ^"repeat" ~ repeat_body ~ ^"end_repeat" }
@@ -79,43 +79,43 @@ binary_operator             = _{
                                  plus | minus |
                                  less_than_or_equal | less_than |
                                  greater_than_or_equal | greater_than |
-                                 not_equal | equal 
+                                 not_equal | equal
                                }
 unary_operator              = _{ plus | minus }
 
 keyword = {
-    ^"at" | 
+    ^"at" |
     ^"by" |
     ^"case" |
-    ^"configuration" | 
+    ^"configuration" |
     ^"do" |
-    ^"else" | 
+    ^"else" |
     ^"elsif" |
-    ^"end_case" | 
-    ^"end_configuration" | 
+    ^"end_case" |
+    ^"end_configuration" |
     ^"end_function" |
-    ^"end_function_block" | 
-    ^"end_if" | 
-    ^"end_program" | 
+    ^"end_function_block" |
+    ^"end_if" |
+    ^"end_program" |
     ^"end_repeat" |
-    ^"end_while" | 
+    ^"end_while" |
     ^"function" |
-    ^"function_block" | 
-    ^"if" | 
-    ^"program" | 
+    ^"function_block" |
+    ^"if" |
+    ^"program" |
     ^"repeat" |
-    ^"resource" | 
-    ^"task" | 
-    ^"then" | 
-    ^"until" | 
-    ^"var_external" | 
-    ^"var_global" | 
-    ^"var_input" | 
-    ^"var_output" | 
+    ^"resource" |
+    ^"task" |
+    ^"then" |
+    ^"until" |
+    ^"var_external" |
+    ^"var_global" |
+    ^"var_input" |
+    ^"var_output" |
     ^"var_in_out" |
-    ^"var" | 
-    ^"while" | 
-    ^"with" 
+    ^"var" |
+    ^"while" |
+    ^"with"
 }
 
 conditional = {
@@ -143,7 +143,7 @@ identifier = @{
 }
 
 WHITESPACE = _{ " " | "\t" | NEWLINE }
-COMMENT = _{ 
-    ( "(*" ~ (!"*)" ~ ANY)* ~ "*)" )  | 
+COMMENT = _{
+    ( "(*" ~ (!"*)" ~ ANY)* ~ "*)" )  |
     ( "//" ~ (!NEWLINE ~ ANY)* )
 }
