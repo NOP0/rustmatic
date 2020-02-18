@@ -1,5 +1,5 @@
 use gpio_cdev::Chip;
-use rustmatic_core::{AccessType, Process, System, Transition};
+use rustmatic_core::{PiAccess, Process, System, Transition};
 use rustmatic_gpio::GpioPin;
 use rustmatic_runtime::{Fault, Runtime};
 use std::{sync::Arc, time::Instant};
@@ -17,10 +17,8 @@ impl PlcMain {
         let my_gpio = GpioPin::input(Chip::new("/dev/gpiochip0").unwrap(), 21);
 
         // Register this input at offset %I4.0 in input Process Image
-        runtime.inputs.register_device(
-            4,
-            0,
-            AccessType::Bit,
+        runtime.inputs.register_device::<bool>(
+            (4, 0),
             runtime.devices.register(Arc::new(my_gpio)),
         );
 
@@ -30,10 +28,8 @@ impl PlcMain {
             GpioPin::output(Chip::new("/dev/gpiochip0").unwrap(), 20);
 
         // Register this output at offset %Q4.0 in input Process Image
-        runtime.outputs.register_device(
-            4,
-            0,
-            AccessType::Bit,
+        runtime.outputs.register_device::<bool>(
+            (4, 0),
             runtime.devices.register(Arc::new(my_gpio_2)),
         );
 
@@ -60,7 +56,7 @@ impl Process for PlcMain {
         {
             let inputs = system.inputs();
 
-            self.my_bool = inputs.read_bit(4, 0);
+            self.my_bool = <bool>::read(inputs, (4, 0));
         }
 
         {
@@ -69,9 +65,9 @@ impl Process for PlcMain {
             let elapsed = self.created.elapsed().as_secs();
 
             if elapsed % 5 != 0 {
-                outputs.write_bit(4, 0, false);
+                <bool>::write(outputs, (4, 0), false);
             } else {
-                outputs.write_bit(4, 0, true);
+                <bool>::write(outputs, (4, 0), true);
             }
         }
 

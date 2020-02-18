@@ -1,4 +1,4 @@
-use rustmatic_core::{AccessType, Process, System, Transition};
+use rustmatic_core::{PiAccess, Process, System, Transition};
 use rustmatic_dummy_input::{DummyBool, DummyDoubleWord};
 use rustmatic_runtime::{Fault, Runtime};
 use std::sync::Arc;
@@ -15,10 +15,8 @@ impl PlcMain {
         let my_bool_input = DummyBool::new();
 
         // Register this input at offset %I4.0 in input Process Image
-        runtime.inputs.register_device(
-            4,
-            0,
-            AccessType::Bit,
+        runtime.inputs.register_device::<bool>(
+            (4, 0),
             runtime.devices.register(Arc::new(my_bool_input)),
         );
 
@@ -26,10 +24,8 @@ impl PlcMain {
         let my_double_word_input = DummyDoubleWord::new();
 
         // Register this input at offset %ID8 in input Process Image
-        runtime.inputs.register_device(
+        runtime.inputs.register_device::<u32>(
             8,
-            0,
-            AccessType::DoubleWord,
             runtime.devices.register(Arc::new(my_double_word_input)),
         );
 
@@ -57,8 +53,8 @@ impl Process for PlcMain {
         {
             let inputs = system.inputs();
 
-            self.my_bool = inputs.read_bit(4, 0);
-            self.my_double_word = inputs.read_double_word(8);
+            self.my_bool = <bool>::read(inputs, (4, 0));
+            self.my_double_word = <u32>::read(inputs, 8);
         }
 
         // Do something with them.
@@ -69,9 +65,9 @@ impl Process for PlcMain {
         let outputs = system.outputs();
 
         // Write to offset %Q0.0 in output Process Image
-        outputs.write_bit(0, 0, self.cycle_counter % 2 != 0);
+        <bool>::write(outputs, (0, 0), self.cycle_counter % 2 != 0);
 
-        println!("The value of output is: {}", outputs.read_bit(0, 0));
+        println!("The value of output is: {}", <bool>::read(outputs, (0, 0)));
 
         self.cycle_counter += 1;
 
