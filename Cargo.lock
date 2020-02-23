@@ -925,15 +925,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "rustmatic"
-version = "0.1.0"
-dependencies = [
- "rustmatic-core",
- "rustmatic-dummy-input",
- "rustmatic-runtime",
-]
-
-[[package]]
 name = "rustmatic-core"
 version = "0.1.0"
 dependencies = [
@@ -974,9 +965,9 @@ dependencies = [
  "anymap",
  "log",
  "rustmatic-core",
+ "rustmatic-dummy-input",
  "rustmatic-wasm",
  "rustmatic-wasm-test",
- "rustmatic-dummy-input",
  "slotmap",
 ]
 
