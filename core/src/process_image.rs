@@ -3,109 +3,175 @@ use byteorder::{ByteOrder, LittleEndian};
 
 const PI_LENGTH: usize = 128;
 
-#[derive(Clone, Copy)]
-pub struct Address {
-    pub byte: usize,
-    pub bit: usize,
-    pub type_of: AccessType,
+pub trait PiAccess {
+    type Op;
+    type Adress;
+    fn read(pi:&ProcessImage, adress: Self::Adress) -> Self::Op;
+    fn write(pi: &mut ProcessImage, adress: Self::Adress, state: Self::Op);
+    fn store_adress(adress: Self::Adress) -> Adress;
+}
+#[derive(Clone, Debug)]
+pub enum Adress {
+    Bool((usize, usize)),
+    U8(usize),
+    U16(usize),
+    U32(usize),
 }
 
-#[derive(Clone, Copy, Debug)]
-pub enum AccessType {
-    Bit,
-    Byte,
-    Word,
-    DoubleWord,
+pub enum Direction{
+    In,
+    Out,
 }
 
-pub struct ProcessImage {
+pub struct ProcessImage
+{   
+    direction : Direction,
     pub image: Vec<u8>,
-    pub devices: Vec<(DeviceID, Address)>,
+    pub devices: Vec<(DeviceID, Adress)>,
 }
 
-impl ProcessImage {
-    pub fn new() -> Self {
-        ProcessImage {
-            image: vec![0;PI_LENGTH],
-            devices: Vec::new(),
-        }
-    }
+impl PiAccess for bool {
+    type Adress = (usize, usize);
+    type Op = bool;
 
-    pub fn with_capacity(capacity: usize) -> Self {
-        ProcessImage {
-            image: vec![0;capacity],
-            devices: Vec::new(),
-        }
-    }
-
-    pub fn read_bit(&self, byte: usize, bit: usize) -> bool {
-        let byte_prev = self.image[byte];
+    fn read(pi:&ProcessImage, adress: (usize, usize)) -> bool {
+        let (byte, bit) = (adress.0, adress.1);
+        let byte_prev = pi.image[byte];
         let mask = 1 << bit;
         (byte_prev & mask) != 0
     }
 
-    pub fn read_byte(&self, byte: usize) -> u8 { self.image[byte] }
-
-    pub fn read_word(&self, word: usize) -> u16 {
-        LittleEndian::read_u16(&self.image[word..word + 2])
-    }
-
-    pub fn read_double_word(&self, dword: usize) -> u32 {
-        LittleEndian::read_u32(&self.image[dword..dword + 4])
-    }
-
-    pub fn write_bit(&mut self, byte: usize, bit: usize, state: bool) {
+    fn write(pi: &mut ProcessImage, adress: (usize, usize), state: bool){ 
+        let (byte, bit) = (adress.0, adress.1);
         if state {
-            self.image[byte] |= 1 << bit;
+            pi.image[byte] |= 1 << bit;
         } else {
-            self.image[byte] &= !(1 << bit);
+            pi.image[byte] &= !(1 << bit);
         }
     }
 
-    pub fn write_byte(&mut self, byte: usize, state: u8) {
-        self.image[byte] = state;
+    fn store_adress(adress: Self::Adress) -> Adress {
+        Adress::Bool(adress)
+    }
+}
+
+impl PiAccess for u8 {
+    type Adress = usize;
+    type Op = u8;
+
+    fn read(pi: &ProcessImage, adress: usize) -> u8 
+     { pi.image[adress] }
+
+    fn write(pi: &mut ProcessImage, adress: usize, state: u8) 
+    {
+            pi.image[adress] = state;
+    }
+    fn store_adress(adress: Self::Adress) -> Adress {
+        Adress::U8(adress)
+    }
+}
+
+impl PiAccess for u16 {
+    type Adress = usize;
+    type Op = u16;
+
+    fn read(pi: &ProcessImage, adress: usize) -> u16 
+           {LittleEndian::read_u16(&pi.image[adress..adress + 2])
     }
 
-    pub fn write_word(&mut self, word: usize, state: u16) {
-        LittleEndian::write_u16(&mut self.image[word..word + 2], state);
+      fn write(pi: &mut ProcessImage, adress: usize, state: u16)
+      {
+        LittleEndian::write_u16(&mut pi.image[adress..adress + 2], state);
+    }
+    fn store_adress(adress: Self::Adress) -> Adress {
+        Adress::U16(adress)
     }
 
-    pub fn write_double_word(&mut self, dword: usize, state: u32) {
-        LittleEndian::write_u32(&mut self.image[dword..dword + 4], state);
+}
+
+impl PiAccess for u32 {
+    type Adress = usize;
+    type Op = u32;
+    
+    fn read(pi: &ProcessImage, adress: usize) -> u32
+    {
+            LittleEndian::read_u32(&pi.image[adress..adress + 4])
+    }
+    fn write(pi: &mut ProcessImage, adress: usize, state: u32) 
+    {
+        LittleEndian::write_u32(&mut pi.image[adress..adress + 4], state);
+    }
+    fn store_adress(adress: Self::Adress) -> Adress {
+        Adress::U32(adress)
     }
 
-    pub fn register_input_device(
+
+}
+
+    
+impl ProcessImage
+    {
+    pub fn new(direction: Direction) -> Self {
+        ProcessImage {
+            direction:direction,
+            image: vec![0; PI_LENGTH],
+            devices: Vec::new(),
+        }
+    }
+
+    pub fn with_capacity(direction: Direction, capacity: usize) -> Self {
+        ProcessImage {
+            direction: direction,
+            image: vec![0; capacity],
+            devices: Vec::new(),
+        }
+    }
+    pub fn register_device<T:PiAccess>(
         &mut self,
-        byte: usize,
-        bit: usize,
-        type_of: AccessType,
+        adress: <T as PiAccess>::Adress,
         device: DeviceID,
     ) {
-        self.devices.push((device, Address { byte, bit, type_of }));
+        let adress = <T as PiAccess>::store_adress(adress);
+        self.devices.push((device, adress));
     }
 
-    pub fn update_inputs(&mut self, devices: &DeviceManager) {
-        let devices_vec: Vec<(DeviceID, Address)> = self.devices.clone();
-
+    pub fn update(&mut self, devices: &DeviceManager ){
+        let devices_vec: Vec<(DeviceID, Adress)> = self.devices.clone();
         for device in devices_vec {
-            match device.1.type_of {
-                AccessType::Bit => self.write_bit(
-                    device.1.byte,
-                    device.1.bit,
-                    devices.read::<bool>(device.0).unwrap(),
-                ),
-                AccessType::Byte => self.write_byte(
-                    device.1.byte,
-                    devices.read::<u8>(device.0).unwrap(),
-                ),
-                AccessType::Word => self.write_word(
-                    device.1.byte,
-                    devices.read::<u16>(device.0).unwrap(),
-                ),
-                AccessType::DoubleWord => self.write_double_word(
-                    device.1.byte,
-                    devices.read::<u32>(device.0).unwrap(),
-                ),
+            let (device_id, adress) = device;
+            match self.direction {
+                Direction::In => {
+                    match adress {
+                        Adress::Bool((byte, bit)) => {
+                            <bool>::write(self, (byte, bit), devices.read::<bool>(device_id).unwrap());
+                        }
+                        Adress::U8(offset) => {
+                            <u8>::write(self, offset, devices.read::<u8>(device_id).unwrap());
+                        }
+                        Adress::U16(offset) => {
+                            <u16>::write(self, offset, devices.read::<u16>(device_id).unwrap());
+                        }
+                        Adress::U32(offset) => {
+                            <u32>::write(self, offset, devices.read::<u32>(device_id).unwrap());
+                            }
+                        }
+                    }
+                Direction::Out => {
+                    match adress {
+                        Adress::Bool((byte, bit)) => {
+                            devices.write::<bool>(device_id, <bool>::read(self, (byte, bit)));
+                        }
+                        Adress::U8(offset) => {
+                            devices.write::<u8>(device_id, <u8>::read(self, offset));
+                        }
+                        Adress::U16(offset) => {
+                            devices.write::<u16>(device_id, <u16>::read(self, offset));
+                        }
+                        Adress::U32(offset) => {
+                            devices.write::<u32>(device_id, <u32>::read(self, offset));
+                        }
+                    }
+                }
             }
         }
     }
