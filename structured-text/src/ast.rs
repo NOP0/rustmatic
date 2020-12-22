@@ -601,12 +601,22 @@ pub struct FloatLiteral {
 
 impl FloatLiteral {
     fn from_pair(pair: Pair<'_, Rule>) -> Result<FloatLiteral, ParseError> {
-        ParseError::expect_rule(Rule::float, &pair)?;
-
-        Ok(FloatLiteral {
-            value: pair.as_str().parse().unwrap(),
-            span: to_span(pair.as_span()),
-        })
+        match pair.as_rule() {
+            Rule::float_engineering => Ok(FloatLiteral {
+                value: pair.as_str().parse().unwrap(),
+                span: to_span(pair.as_span()),
+            }),
+            Rule::float => Ok(FloatLiteral {
+                value: pair.as_str().parse().unwrap(),
+                span: to_span(pair.as_span()),
+            }),
+            _ => {
+                return Err(ParseError::expected_one_of(
+                    &[Rule::float_engineering, Rule::float],
+                    pair.as_span(),
+                ));
+            },
+        }
     }
 }
 
@@ -980,12 +990,40 @@ mod tests {
             parser: RawParser,
             input: src,
             rule: Rule::float,
-            tokens: [float(0, 4)]
+            tokens: [float(0, 4, [float_basic(0, 4)])]
         }
 
         let got = FloatLiteral::from_str(src).unwrap();
 
         assert_eq!(got, expected);
+    }
+
+    #[test]
+    fn parse_engineering_float() {
+        let inputs = vec![
+            ("3.1e-1", 3.1e-1, Span::new(0, 6)),
+            ("3.14e0", 3.14e0, Span::new(0, 6)),
+            ("2.0e+1", 2.0e+1, Span::new(0, 6)),
+            ("2.0e+100",2.0e+100, Span::new(0, 8)),
+            ("2.0e-100",2.0e-100, Span::new(0, 8)),
+        ];
+
+        for (src, float_value, span) in inputs {
+
+            parses_to! {
+                parser: RawParser,
+                input: src,
+                rule: Rule::float,
+                tokens: [float(0, src.len(), [float_engineering(0, src.len())])]
+            }
+
+            let got = FloatLiteral::from_str(src).unwrap();
+            let should_be = FloatLiteral {
+                value: float_value,
+                span,
+            };
+            assert_eq!(should_be, got);
+        }
     }
 
     #[test]
@@ -1408,7 +1446,7 @@ mod tests {
                       identifier(415, 429),
                       identifier(433, 437),
                       assign(438, 440),
-                      float(441, 445),
+                      float(441, 445, [float_basic( 441, 445)]),
                     ]),
                   ]),
                   var_block(533, 837, [

@@ -42,9 +42,12 @@ boolean                     =  { boolean_true | boolean_false }
 boolean_true                =  { ^"true" }
 boolean_false               =  { ^"false" }
 
-float                       = ${ float_characteristic ~ "." ~ float_mantissa }
+float                       = ${ float_engineering | float_basic }
+float_engineering           =  { float_characteristic ~ "." ~ float_mantissa ~ ^"e" ~ ("-" | "+")? ~ ('0'..'9')+ }
+float_basic                 =  { float_characteristic ~ "." ~ float_mantissa }
 float_characteristic        = _{ "0" | (('1'..'9') ~ ('0'..'9' | "_")*) }
 float_mantissa              = _{ ('0'..'9')+ }
+
 
 integer                     = ${ integer_hexadecimal_sigil | integer_binary_sigil | integer_decimal | integer_zero }
 integer_decimal             =  { '1'..'9' ~ ('0'..'9' | "_")* }
