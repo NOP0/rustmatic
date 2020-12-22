@@ -43,10 +43,7 @@ pub trait System {
 
 slotmap::new_key_type! {
     /// An opaque handle that can be used to read from an input.
-    pub struct InputNumber;
-
-    /// An opaque handle that can be used to write to an output.
-    pub struct OutputNumber;
+    pub struct AdressNumber;
 
     /// The handle used to access a variable.
     pub struct VariableIndex;
