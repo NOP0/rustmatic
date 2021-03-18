@@ -42,9 +42,26 @@ boolean                     =  { boolean_true | boolean_false }
 boolean_true                =  { ^"true" }
 boolean_false               =  { ^"false" }
 
+fixed_point                 = { integer ~ ("." ~ integer)? }
+
 float                       = ${ float_characteristic ~ "." ~ float_mantissa }
 float_characteristic        = _{ "0" | (('1'..'9') ~ ('0'..'9' | "_")*) }
 float_mantissa              = _{ ('0'..'9')+ }
+
+duration                    = { ("TIME" | "T") ~ "#" ~ } 
+days                        = { integer ~ "d" ~ ("_" ~ hours)? }
+hours                       = { integer ~ "h" ~ ("_" ~ minutes)? }
+minutes                     = { integer ~ "m" ~ ("_" ~ seconds)? }
+seconds                     = { integer ~ "s" ~ ("_" ~ milliseconds)? }
+milliseconds                = { fixed_point ~ "ms" }
+
+time_of_day                 = { ("TIME_OF_DAY" | "TOD") ~ "#" ~ tod_payload }
+tod_payload                 = { integer ~ ":" ~ integer ~ ":" ~ fixed_point }
+
+date                        = { ("DATE" | "D") ~ "#" ~ date_payload }
+date_payload                = { integer ~ "-" ~ integer ~ "-" ~ integer }
+
+date_and_time               = { ("DATE_AND_TIME" | "DT") ~ "#" ~ date_payload ~ tod_payload }   
 
 integer                     = ${ integer_hexadecimal_sigil | integer_binary_sigil | integer_decimal | integer_zero }
 integer_decimal             =  { '1'..'9' ~ ('0'..'9' | "_")* }
