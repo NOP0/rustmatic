@@ -48,7 +48,7 @@ float                       = ${ float_characteristic ~ "." ~ float_mantissa }
 float_characteristic        = _{ "0" | (('1'..'9') ~ ('0'..'9' | "_")*) }
 float_mantissa              = _{ ('0'..'9')+ }
 
-duration                    = { ("TIME" | "T") ~ "#" ~ } 
+duration                    = { ("TIME" | "T") ~ "#" ~ (days | hours | minutes | seconds | milliseconds) } 
 days                        = { integer ~ "d" ~ ("_" ~ hours)? }
 hours                       = { integer ~ "h" ~ ("_" ~ minutes)? }
 minutes                     = { integer ~ "m" ~ ("_" ~ seconds)? }
