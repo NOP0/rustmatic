@@ -119,6 +119,7 @@ keyword = {
     ^"function" |
     ^"function_block" | 
     ^"if" | 
+    ^"of" |
     ^"program" | 
     ^"repeat" |
     ^"resource" | 
@@ -149,6 +150,17 @@ elsif_branch = {
 
 else_branch = {
     ^"else" ~ block
+}
+
+
+case = {
+    ^"case" ~ expression ~ ^"of" ~ case_branch+ ~ else_branch? ~ ^"end_case"
+}
+
+case_branch = {
+    ('0'..'9')+ ~ ":" ~ block |
+    ('0'..'9')+ ~ ("," ~ ('0'..'9')+)+ ~ block |
+    ('0'..'9')+ ~ ".." ~ ('0'..'9')+ ~ block
 }
 
 condition_then_block = _{
